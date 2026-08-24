@@ -1,0 +1,18 @@
+{
+  "format": "openai_messages_with_tools",
+  "source_path": "data/sft/retail_serial_v3/selected_candidates_256.jsonl",
+  "examples": 256,
+  "task_coverage": 64,
+  "tool_schema_count": 16,
+  "message_role_counts": {
+    "system": 256,
+    "user": 1280,
+    "assistant": 3344,
+    "tool": 2064
+  },
+  "intended_loss_mask": "assistant_only",
+  "tokenized": false,
+  "target_model": null,
+  "removed_tau2_greeting": true,
+  "removed_user_stop": true
+}

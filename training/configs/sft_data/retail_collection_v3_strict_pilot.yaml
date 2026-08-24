@@ -1,0 +1,33 @@
+experiment_name: sft_retail_collection_v3_strict_pilot
+
+domain: retail
+task_split: train
+evaluation_type: env
+
+provider:
+  name: opencode_go
+  api_base: https://opencode.ai/zen/go/v1
+
+agent:
+  model: openai/deepseek-v4-flash
+  args:
+    parallel_tool_calls: false
+
+user:
+  model: openai/deepseek-v4-flash
+  temperature: 0.0
+
+sampling:
+  max_concurrency: 4
+  auto_resume: true
+  run_name_prefix: sft_retail_strict_protocol_pilot
+  tiers:
+    - name: medium
+      temperature: 0.6
+      num_trials: 4
+
+task_ids:
+  - "0"
+  - "15"
+  - "28"
+  - "112"

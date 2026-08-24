@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-08-18T19:50:58.747723",
+  "model": "deepseek/deepseek-v4-flash",
+  "evaluation_type": "environment_only",
+  "max_concurrency": 1,
+  "domains": {
+    "retail": {
+      "task_count": 114,
+      "completed_count": 113,
+      "infrastructure_errors": 1,
+      "env_success_count": 103,
+      "mean_duration_seconds": 46.678,
+      "median_duration_seconds": 42.937,
+      "p90_duration_seconds": 68.889,
+      "batch_wall_seconds": 5387.573
+    },
+    "airline": {
+      "task_count": 50,
+      "completed_count": 50,
+      "infrastructure_errors": 0,
+      "env_success_count": 41,
+      "mean_duration_seconds": 63.308,
+      "median_duration_seconds": 61.584,
+      "p90_duration_seconds": 105.993,
+      "batch_wall_seconds": 3200.164
+    }
+  }
+}

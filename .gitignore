@@ -1,0 +1,62 @@
+# macOS and editor state
+.DS_Store
+.vscode/
+.idea/
+
+# Python environments and caches
+.venv/
+.venv-*/
+**/.venv/
+**/.venv-*/
+.local/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Secrets and local environment variables
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# External source checkout (managed independently)
+tau2-bench/
+
+# Model weights, downloaded artifacts, and training outputs
+training/artifacts/
+training/checkpoints/
+training/outputs/
+wandb/
+**/wandb/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+pytorch_model*.bin
+
+# Rebuildable tokenized arrays and raw evaluation dumps
+training/data/tokenized/
+training/data/eval/
+
+# Intermediate/raw SFT candidate pools; keep manifests, summaries,
+# and the final curated sft_train_*.jsonl files under version control.
+training/data/sft/old_data/
+training/data/sft/**/candidates.jsonl
+training/data/sft/**/ranked_candidates.jsonl
+training/data/sft/**/semantic_screened_candidates*.jsonl
+training/data/sft/**/selected_candidates*.jsonl
+
+# Temporary files and logs
+*.log
+*.tmp
+*.swp
+*~

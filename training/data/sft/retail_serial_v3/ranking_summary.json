@@ -1,0 +1,400 @@
+{
+  "total": 512,
+  "hard_pass": 451,
+  "hard_rejected": 61,
+  "hard_rejection_counts": {
+    "db_mismatch": 61,
+    "reward_zero": 61
+  },
+  "review_flag_counts": {
+    "tool_error_needs_review": 52,
+    "long_trajectory": 38,
+    "many_tool_calls": 3
+  },
+  "task_counts": [
+    {
+      "task_id": "0",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "1",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "2",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "3",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "4",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "6",
+      "total": 8,
+      "hard_pass": 6,
+      "needs_review": 0
+    },
+    {
+      "task_id": "7",
+      "total": 8,
+      "hard_pass": 4,
+      "needs_review": 0
+    },
+    {
+      "task_id": "8",
+      "total": 8,
+      "hard_pass": 4,
+      "needs_review": 0
+    },
+    {
+      "task_id": "10",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "11",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "13",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "14",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "15",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "16",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "19",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 5
+    },
+    {
+      "task_id": "20",
+      "total": 8,
+      "hard_pass": 6,
+      "needs_review": 4
+    },
+    {
+      "task_id": "21",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "22",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 0
+    },
+    {
+      "task_id": "23",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "25",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "28",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "29",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 1
+    },
+    {
+      "task_id": "30",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 6
+    },
+    {
+      "task_id": "31",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 3
+    },
+    {
+      "task_id": "34",
+      "total": 8,
+      "hard_pass": 4,
+      "needs_review": 0
+    },
+    {
+      "task_id": "35",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 7
+    },
+    {
+      "task_id": "37",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 7
+    },
+    {
+      "task_id": "46",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "47",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 1
+    },
+    {
+      "task_id": "48",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "57",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "59",
+      "total": 8,
+      "hard_pass": 2,
+      "needs_review": 1
+    },
+    {
+      "task_id": "63",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "66",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "67",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "69",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 0
+    },
+    {
+      "task_id": "72",
+      "total": 8,
+      "hard_pass": 6,
+      "needs_review": 0
+    },
+    {
+      "task_id": "75",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "76",
+      "total": 8,
+      "hard_pass": 3,
+      "needs_review": 0
+    },
+    {
+      "task_id": "78",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "80",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "81",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "82",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "83",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "84",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "85",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "87",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 0
+    },
+    {
+      "task_id": "89",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "91",
+      "total": 8,
+      "hard_pass": 6,
+      "needs_review": 0
+    },
+    {
+      "task_id": "92",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "93",
+      "total": 8,
+      "hard_pass": 3,
+      "needs_review": 0
+    },
+    {
+      "task_id": "95",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "96",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 0
+    },
+    {
+      "task_id": "98",
+      "total": 8,
+      "hard_pass": 4,
+      "needs_review": 0
+    },
+    {
+      "task_id": "99",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 0
+    },
+    {
+      "task_id": "103",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "104",
+      "total": 8,
+      "hard_pass": 7,
+      "needs_review": 5
+    },
+    {
+      "task_id": "105",
+      "total": 8,
+      "hard_pass": 6,
+      "needs_review": 0
+    },
+    {
+      "task_id": "106",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "107",
+      "total": 8,
+      "hard_pass": 2,
+      "needs_review": 0
+    },
+    {
+      "task_id": "109",
+      "total": 8,
+      "hard_pass": 5,
+      "needs_review": 0
+    },
+    {
+      "task_id": "110",
+      "total": 8,
+      "hard_pass": 5,
+      "needs_review": 0
+    },
+    {
+      "task_id": "112",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 6
+    },
+    {
+      "task_id": "113",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    }
+  ]
+}

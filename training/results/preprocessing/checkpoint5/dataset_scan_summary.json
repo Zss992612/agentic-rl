@@ -1,0 +1,270 @@
+{
+  "checkpoint": "full_dataset_transient_scan",
+  "source": {
+    "path": "/Users/projects/agentic rl/training/data/sft/retail_serial_v3/sft_train_256.jsonl",
+    "sha256": "b5f95a0a77de50a0a7887dbf86c474ebe25d9f41529756efb1de7bb20eb60b73"
+  },
+  "tokenizer": {
+    "path": "/Users/projects/agentic rl/training/artifacts/tokenizers/Qwen3-4B-Instruct-2507",
+    "class": "Qwen2TokenizerFast",
+    "vocab_size": 151643
+  },
+  "settings": {
+    "max_model_len": 16384,
+    "truncation": false,
+    "padding": false,
+    "final_token_arrays_written": false
+  },
+  "counts": {
+    "records_seen": 256,
+    "successful_trajectories": 256,
+    "failed_trajectories": 0,
+    "unique_trajectory_ids": 256,
+    "unique_tasks": 64,
+    "trajectories_per_task": {
+      "6": 8,
+      "4": 9,
+      "5": 9,
+      "3": 15,
+      "2": 16,
+      "7": 6,
+      "8": 1
+    },
+    "total_assistant_spans": 3344,
+    "total_assistant_text_spans": 1280,
+    "total_assistant_tool_call_spans": 2064,
+    "total_tool_results": 2064
+  },
+  "token_lengths": {
+    "min": 6145,
+    "max": 16904,
+    "mean": 10304.1875,
+    "median": 9907.0,
+    "p75": 11474.5,
+    "p90": 13527.0,
+    "p95": 13971.25,
+    "p99": 15710.849999999997
+  },
+  "supervised_token_lengths": {
+    "min": 624,
+    "max": 5995,
+    "mean": 1618.3359375,
+    "median": 1425.0,
+    "p75": 1921.0,
+    "p90": 2381.5,
+    "p95": 2989.0,
+    "p99": 4470.5999999999985
+  },
+  "supervised_fractions": {
+    "min": 0.08258079847908745,
+    "max": 0.354649787032655,
+    "mean": 0.1516503076490762,
+    "median": 0.14598117845279748,
+    "p75": 0.1728195660241809,
+    "p90": 0.19684508372612597,
+    "p95": 0.22264154127308505,
+    "p99": 0.28533104897476835
+  },
+  "totals": {
+    "tokens": 2637872,
+    "supervised_tokens": 414294,
+    "masked_tokens": 2223578,
+    "weighted_supervised_fraction": 0.15705614222373185
+  },
+  "length_bins": {
+    "04097-08192": 29,
+    "08193-12288": 187,
+    "12289-16384": 38,
+    ">16384": 2
+  },
+  "context_limit": {
+    "within_limit": 254,
+    "over_limit": 2,
+    "over_limit_records": [
+      {
+        "dataset_index": 107,
+        "trajectory_id": "056017b6-8da2-4a97-8500-89d59462db5d",
+        "task_id": "98",
+        "tokens": 16897
+      },
+      {
+        "dataset_index": 108,
+        "trajectory_id": "7cd38137-61b3-4f4e-8da3-3d54bba014cd",
+        "task_id": "99",
+        "tokens": 16904
+      }
+    ]
+  },
+  "boundary_alignment": {
+    "trajectories_with_merged_boundaries": 229,
+    "merged_assistant_spans": 355,
+    "masked_leading_characters": 710,
+    "non_whitespace_characters": 0,
+    "trajectories_with_non_whitespace": []
+  },
+  "top_10_longest": [
+    {
+      "dataset_index": 108,
+      "trajectory_id": "7cd38137-61b3-4f4e-8da3-3d54bba014cd",
+      "task_id": "99",
+      "tokens": 16904,
+      "supervised_tokens": 5995,
+      "supervised_fraction": 0.354649787032655
+    },
+    {
+      "dataset_index": 107,
+      "trajectory_id": "056017b6-8da2-4a97-8500-89d59462db5d",
+      "task_id": "98",
+      "tokens": 16897,
+      "supervised_tokens": 4058,
+      "supervised_fraction": 0.2401609753210629
+    },
+    {
+      "dataset_index": 106,
+      "trajectory_id": "9bb35156-39ee-4b1b-8ee5-08bf494ebf80",
+      "task_id": "98",
+      "tokens": 15839,
+      "supervised_tokens": 4422,
+      "supervised_fraction": 0.27918429193762234
+    },
+    {
+      "dataset_index": 201,
+      "trajectory_id": "110a383a-c797-4a33-8f82-68d80c9b31f8",
+      "task_id": "99",
+      "tokens": 15606,
+      "supervised_tokens": 4602,
+      "supervised_fraction": 0.2948865820838139
+    },
+    {
+      "dataset_index": 244,
+      "trajectory_id": "5bc962ea-294f-4b16-a1e6-fee2e2c23570",
+      "task_id": "99",
+      "tokens": 15469,
+      "supervised_tokens": 4530,
+      "supervised_fraction": 0.2928437520201694
+    },
+    {
+      "dataset_index": 135,
+      "trajectory_id": "ea435c23-8668-43bc-8cf7-5af21e96fb6f",
+      "task_id": "98",
+      "tokens": 15183,
+      "supervised_tokens": 3583,
+      "supervised_fraction": 0.2359876177303563
+    },
+    {
+      "dataset_index": 31,
+      "trajectory_id": "f6b05c85-5d14-4d39-a583-f4bd8da49190",
+      "task_id": "20",
+      "tokens": 15042,
+      "supervised_tokens": 3286,
+      "supervised_fraction": 0.21845499268714266
+    },
+    {
+      "dataset_index": 228,
+      "trajectory_id": "0126f348-9917-4923-a1af-30f29d57081e",
+      "task_id": "99",
+      "tokens": 14938,
+      "supervised_tokens": 3965,
+      "supervised_fraction": 0.265430445842817
+    },
+    {
+      "dataset_index": 233,
+      "trajectory_id": "2b1ba4de-cbd5-4bd6-b33d-055da4961b87",
+      "task_id": "98",
+      "tokens": 14842,
+      "supervised_tokens": 2097,
+      "supervised_fraction": 0.14128823608678076
+    },
+    {
+      "dataset_index": 77,
+      "trajectory_id": "970ea165-9473-433f-807a-d057d40c46dc",
+      "task_id": "76",
+      "tokens": 14831,
+      "supervised_tokens": 3512,
+      "supervised_fraction": 0.23680129458566515
+    }
+  ],
+  "bottom_10_supervised_fraction": [
+    {
+      "dataset_index": 126,
+      "trajectory_id": "52d58da9-e37e-4882-b372-8b3a11e472c1",
+      "task_id": "113",
+      "tokens": 8416,
+      "supervised_tokens": 695,
+      "supervised_fraction": 0.08258079847908745
+    },
+    {
+      "dataset_index": 191,
+      "trajectory_id": "7ece6d6d-334f-4c1d-830a-66e8773232b7",
+      "task_id": "113",
+      "tokens": 8427,
+      "supervised_tokens": 710,
+      "supervised_fraction": 0.08425299632134804
+    },
+    {
+      "dataset_index": 210,
+      "trajectory_id": "2deda3d2-6ffc-41f1-8b86-fec4cbf07a5f",
+      "task_id": "113",
+      "tokens": 8514,
+      "supervised_tokens": 743,
+      "supervised_fraction": 0.08726802912849424
+    },
+    {
+      "dataset_index": 163,
+      "trajectory_id": "a59c39ef-91a7-4981-8d70-660f9eafd523",
+      "task_id": "113",
+      "tokens": 8508,
+      "supervised_tokens": 763,
+      "supervised_fraction": 0.08968030089327692
+    },
+    {
+      "dataset_index": 224,
+      "trajectory_id": "dd9c18eb-0c91-44f3-99f8-029b24b3bd5f",
+      "task_id": "113",
+      "tokens": 8502,
+      "supervised_tokens": 766,
+      "supervised_fraction": 0.09009644789461303
+    },
+    {
+      "dataset_index": 178,
+      "trajectory_id": "6b044761-0ad3-4da5-bd19-af8fd5d3266f",
+      "task_id": "113",
+      "tokens": 8554,
+      "supervised_tokens": 784,
+      "supervised_fraction": 0.09165302782324058
+    },
+    {
+      "dataset_index": 226,
+      "trajectory_id": "5d910e50-499a-4c7d-8e4e-e1fae56844af",
+      "task_id": "15",
+      "tokens": 9898,
+      "supervised_tokens": 944,
+      "supervised_fraction": 0.09537280258638109
+    },
+    {
+      "dataset_index": 89,
+      "trajectory_id": "0a35d023-9524-4055-a010-44a549a2fc4d",
+      "task_id": "84",
+      "tokens": 8670,
+      "supervised_tokens": 835,
+      "supervised_fraction": 0.09630911188004614
+    },
+    {
+      "dataset_index": 4,
+      "trajectory_id": "19eb81ce-5c4e-4a80-a552-25c3e74d7d77",
+      "task_id": "2",
+      "tokens": 10744,
+      "supervised_tokens": 1045,
+      "supervised_fraction": 0.09726358897989576
+    },
+    {
+      "dataset_index": 76,
+      "trajectory_id": "bacbae2e-a494-4267-8e6a-bcb37c7f070c",
+      "task_id": "76",
+      "tokens": 11028,
+      "supervised_tokens": 1077,
+      "supervised_fraction": 0.09766050054406965
+    }
+  ],
+  "failures": []
+}

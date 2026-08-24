@@ -1,0 +1,71 @@
+experiment:
+  name: retail_qwen3_4b_instruct_2507_lora_v1
+  seed: 42
+  output_root: outputs/sft
+
+model:
+  # Set this independently on local and AutoDL hosts. The value must point to
+  # a complete Qwen3-4B-Instruct-2507 model directory, not tokenizer-only files.
+  path: ${AGENTIC_RL_MODEL_PATH}
+  dtype: bfloat16
+  attention_implementation: flash_attention_2
+  trust_remote_code: false
+  use_cache: false
+  gradient_checkpointing: true
+
+data:
+  path: data/tokenized/retail_serial_v3_qwen3_4b_instruct_2507
+  max_seq_length: 17408
+  num_workers: 2
+  pin_memory: true
+  shuffle: true
+  length_bucket: true
+  bucket_size: 32
+
+lora:
+  enabled: true
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+optimization:
+  epochs: 3
+  micro_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1.0e-8
+  max_grad_norm: 1.0
+  warmup_ratio: 0.03
+  scheduler: cosine
+
+runtime:
+  device: cuda
+  tf32: true
+  compile: false
+  deterministic: false
+
+checkpoint:
+  save_steps: 16
+  keep_last: 3
+  save_optimizer: true
+  resume_from: null
+
+tracking:
+  wandb:
+    enabled: true
+    project: agentic-rl
+    entity: null
+    log_steps: 1
+    watch_model: false

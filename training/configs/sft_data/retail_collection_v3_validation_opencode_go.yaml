@@ -1,0 +1,45 @@
+experiment_name: sft_retail_collection_v3_validation_opencode_go
+
+domain: retail
+task_split: train
+evaluation_type: env
+
+provider:
+  name: opencode_go
+  api_base: https://opencode.ai/zen/go/v1
+
+agent:
+  model: openai/deepseek-v4-flash
+  args:
+    parallel_tool_calls: false
+
+user:
+  model: openai/deepseek-v4-flash
+  temperature: 0.0
+
+sampling:
+  max_concurrency: 4
+  auto_resume: true
+  run_name_prefix: sft_retail_validation_opencode_go
+  tiers:
+    - name: low
+      temperature: 0.2
+      num_trials: 1
+    - name: medium
+      temperature: 0.6
+      num_trials: 1
+    - name: high
+      temperature: 0.9
+      num_trials: 1
+
+task_ids:
+  - "24"
+  - "41"
+  - "43"
+  - "44"
+  - "50"
+  - "52"
+  - "54"
+  - "58"
+  - "73"
+  - "88"

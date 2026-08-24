@@ -1,0 +1,76 @@
+{
+  "total": 80,
+  "hard_pass": 73,
+  "hard_rejected": 7,
+  "hard_rejection_counts": {
+    "db_mismatch": 7,
+    "reward_zero": 7
+  },
+  "review_flag_counts": {
+    "parallel_tool_calls": 63,
+    "tool_error_needs_review": 8,
+    "many_tool_calls": 1
+  },
+  "task_counts": [
+    {
+      "task_id": "24",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "41",
+      "total": 8,
+      "hard_pass": 4,
+      "needs_review": 4
+    },
+    {
+      "task_id": "43",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "44",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 7
+    },
+    {
+      "task_id": "50",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "52",
+      "total": 8,
+      "hard_pass": 5,
+      "needs_review": 5
+    },
+    {
+      "task_id": "54",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "58",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    },
+    {
+      "task_id": "73",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 0
+    },
+    {
+      "task_id": "88",
+      "total": 8,
+      "hard_pass": 8,
+      "needs_review": 8
+    }
+  ]
+}

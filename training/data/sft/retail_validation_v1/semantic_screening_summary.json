@@ -1,0 +1,39 @@
+{
+  "processed": 73,
+  "decision_counts": {
+    "rejected": 58,
+    "accepted": 15
+  },
+  "reason_counts": {
+    "parallel_tool_calls": 53,
+    "policy_violation_at_most_one_tool_call": 3,
+    "tool_error_recovered": 2,
+    "correct_refund_total": 1,
+    "user_requirements_preserved": 1,
+    "user_authenticated_via_name_zip": 1,
+    "cancelled_order_correctly_identified_as_non_restorable": 1,
+    "user_request_for_exception_escalated_to_human_agent": 1,
+    "no_tool_errors": 1,
+    "user_out_of_role_message": 1,
+    "parallel_tool_calls_policy_violation": 1,
+    "parallel_tool_calls_violate_one_tool_at_a_time_policy": 1,
+    "incorrect_availability_statement": 1,
+    "user_impersonated_assistant": 1,
+    "user preserved task constraints": 1,
+    "proper authentication via name and zip": 1,
+    "order status checked before action": 1,
+    "correct transfer to human agent for unsupported request": 1,
+    "no tool errors occurred": 1,
+    "incorrect_price_difference_before_write": 1,
+    "incorrect_refund_summary_after_write": 1,
+    "user_preserved_constraints": 1,
+    "authenticated_via_name_and_zip": 1,
+    "correctly_identified_cancelled_order": 1,
+    "appropriate_transfer_to_human_agent": 1,
+    "final_message_matches_transfer_action": 1,
+    "missing_tablet_storage_info": 1,
+    "unsupported_recommendation": 1,
+    "parallel_tool_calls_violates_policy": 1
+  },
+  "judge_errors": []
+}

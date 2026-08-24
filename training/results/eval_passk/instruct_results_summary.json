@@ -1,0 +1,128 @@
+{
+  "input_file": "/Users/projects/agentic rl/training/data/eval/instruct_results.json",
+  "timestamp": "2026-08-22T13:25:40.841203",
+  "model": "openai/Qwen/Qwen3-4B-Instruct-2507",
+  "user_model": "openai/deepseek-v4-flash",
+  "num_tasks": 40,
+  "expected_trials": 4,
+  "total_simulations": 160,
+  "total_successes": 83,
+  "total_failures": 77,
+  "average_reward": 0.51875,
+  "pass_hat_k": {
+    "1": 0.51875,
+    "2": 0.3625,
+    "3": 0.2875,
+    "4": 0.25
+  },
+  "group_rewards": {
+    "all_failure_tasks": 8,
+    "all_failure_rate": 0.2,
+    "all_failure_task_ids": [
+      "32",
+      "33",
+      "36",
+      "56",
+      "74",
+      "79",
+      "94",
+      "101"
+    ],
+    "mixed_tasks": 22,
+    "mixed_rate": 0.55,
+    "mixed_task_ids": [
+      "5",
+      "18",
+      "26",
+      "27",
+      "38",
+      "39",
+      "40",
+      "42",
+      "45",
+      "49",
+      "53",
+      "55",
+      "61",
+      "64",
+      "71",
+      "86",
+      "90",
+      "97",
+      "100",
+      "102",
+      "108",
+      "111"
+    ],
+    "all_success_tasks": 10,
+    "all_success_rate": 0.25,
+    "all_success_task_ids": [
+      "9",
+      "12",
+      "17",
+      "51",
+      "60",
+      "62",
+      "65",
+      "68",
+      "70",
+      "77"
+    ],
+    "zero_variance_tasks": 18,
+    "zero_variance_rate": 0.45,
+    "zero_variance_task_ids": [
+      "9",
+      "12",
+      "17",
+      "32",
+      "33",
+      "36",
+      "51",
+      "56",
+      "60",
+      "62",
+      "65",
+      "68",
+      "70",
+      "74",
+      "77",
+      "79",
+      "94",
+      "101"
+    ],
+    "mean_task_reward_variance": 0.1171875,
+    "mean_task_reward_std": 0.2532291281149713,
+    "success_count_distribution": {
+      "0": 8,
+      "1": 7,
+      "2": 9,
+      "3": 6,
+      "4": 10
+    }
+  },
+  "per_trial": {
+    "0": {
+      "num_simulations": 40,
+      "average_reward": 0.55,
+      "success_count": 22
+    },
+    "1": {
+      "num_simulations": 40,
+      "average_reward": 0.5,
+      "success_count": 20
+    },
+    "2": {
+      "num_simulations": 40,
+      "average_reward": 0.575,
+      "success_count": 23
+    },
+    "3": {
+      "num_simulations": 40,
+      "average_reward": 0.45,
+      "success_count": 18
+    }
+  },
+  "termination_counts": {
+    "user_stop": 160
+  }
+}

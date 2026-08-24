@@ -1,0 +1,3 @@
+model,input_file,num_tasks,total_simulations,average_reward,all_failure_tasks,mixed_tasks,all_success_tasks,zero_variance_tasks,zero_variance_rate,mean_task_reward_variance,pass_1,pass_2,pass_3,pass_4
+openai/Qwen/Qwen3-4B-Instruct-2507,/Users/projects/agentic rl/training/data/eval/instruct_results.json,40,160,0.51875,8,22,10,18,0.45,0.1171875,0.51875,0.3625,0.2875,0.25
+openai/Qwen/Qwen3-4B,/Users/projects/agentic rl/training/data/eval/non_thingink_results.json,40,160,0.39375,13,22,5,18,0.45,0.1140625,0.39375,0.24166666666666664,0.16875,0.125

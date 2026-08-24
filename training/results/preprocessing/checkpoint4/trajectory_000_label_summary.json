@@ -1,0 +1,24 @@
+{
+  "checkpoint": "qwen_assistant_only_labels",
+  "dataset_index": 0,
+  "trajectory_id": "7befd7d4-2a48-4dda-891f-c072fb008517",
+  "task_id": "0",
+  "total_tokens": 10185,
+  "supervised_tokens": 1290,
+  "masked_tokens": 8895,
+  "supervised_fraction": 0.12665684830633284,
+  "assistant_spans": 12,
+  "assistant_span_kinds": {
+    "text": 5,
+    "tool_call": 7
+  },
+  "boundary_merged_assistant_spans": 1,
+  "masked_leading_assistant_characters": 2,
+  "ignore_index": -100,
+  "assistant_headers_masked": true,
+  "assistant_im_end_supervised": true,
+  "manual_label_shift": false,
+  "truncated": false,
+  "padded": false,
+  "final_numpy_dataset_written": false
+}

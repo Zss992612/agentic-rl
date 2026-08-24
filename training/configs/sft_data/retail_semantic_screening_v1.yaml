@@ -1,0 +1,13 @@
+input_path: data/sft/ranked_candidates.jsonl
+manifest_path: data/sft/manifest.json
+output_path: data/sft/semantic_screened_candidates_v1.jsonl
+summary_path: data/sft/semantic_screening_summary_v1.json
+
+judge:
+  model: openai/deepseek-v4-flash
+  api_base: https://opencode.ai/zen/go/v1
+  temperature: 0
+  confidence_threshold: 0.8
+  max_concurrency: 4
+  max_candidates: 20
+  prompt_version: retail_semantic_v1
