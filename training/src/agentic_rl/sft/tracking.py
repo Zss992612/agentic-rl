@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Mapping
+from uuid import uuid4
 
 import torch
 import wandb
@@ -108,7 +109,12 @@ class WandbMetricsCallback(SFTTrainerCallback):
             run_id = id_path.read_text(encoding="utf-8").strip()
             if run_id:
                 return run_id
-        run_id = self._wandb.util.generate_id()
+        generate_id = getattr(
+            getattr(self._wandb, "util", None),
+            "generate_id",
+            None,
+        )
+        run_id = generate_id() if callable(generate_id) else uuid4().hex[:8]
         id_path.write_text(run_id + "\n", encoding="utf-8")
         return run_id
 
