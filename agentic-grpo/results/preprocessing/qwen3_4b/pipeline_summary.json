@@ -1,0 +1,52 @@
+{
+  "pipeline": "retail_serial_v3_qwen3_4b",
+  "status": "complete",
+  "completed_at_utc": "2026-08-27T06:03:44.983055+00:00",
+  "config": {
+    "path": "/Users/projects/agentic rl/training/configs/preprocessing/retail_qwen3_4b.yaml",
+    "sha256": "bf6d23f951d1127ae1d898368fa73c7e7f4cb572aba5b34482dd4656d0755de1"
+  },
+  "source": {
+    "path": "/Users/projects/agentic rl/training/data/sft/retail_serial_v3/sft_train_256.jsonl",
+    "sha256": "b5f95a0a77de50a0a7887dbf86c474ebe25d9f41529756efb1de7bb20eb60b73"
+  },
+  "tokenizer_path": "/Users/projects/agentic rl/training/artifacts/tokenizers/Qwen3-4B",
+  "counts": {
+    "records_seen": 256,
+    "successful_trajectories": 256,
+    "failed_trajectories": 0,
+    "unique_trajectory_ids": 256,
+    "unique_tasks": 64,
+    "trajectories_per_task": {
+      "6": 8,
+      "4": 9,
+      "5": 9,
+      "3": 15,
+      "2": 16,
+      "7": 6,
+      "8": 1
+    },
+    "total_assistant_spans": 3344,
+    "total_assistant_text_spans": 1280,
+    "total_assistant_tool_call_spans": 2064,
+    "total_tool_results": 2064
+  },
+  "tokens": {
+    "tokens": 2638896,
+    "supervised_tokens": 415318,
+    "masked_tokens": 2223578,
+    "weighted_supervised_fraction": 0.15738323905148213
+  },
+  "selected_max_seq_length": 17408,
+  "length_rounding": 512,
+  "truncation": false,
+  "output": {
+    "directory": "/Users/projects/agentic rl/training/data/tokenized/retail_serial_v3_qwen3_4b",
+    "manifest_sha256": "675fac9bd0735d46dbaa55dd52f1d198bd2534810f2b31e9cc26de7da4932bcc",
+    "validation": {
+      "trajectories": 256,
+      "tokens": 2638896,
+      "supervised_tokens": 415318
+    }
+  }
+}

@@ -1,0 +1,1138 @@
+diff --git a/tests/experimental/agent_loop/test_basic_agent_loop.py b/tests/experimental/agent_loop/test_basic_agent_loop.py
+index 07d0ed7b..b700939c 100644
+--- a/tests/experimental/agent_loop/test_basic_agent_loop.py
++++ b/tests/experimental/agent_loop/test_basic_agent_loop.py
+@@ -23,7 +23,11 @@ from transformers.utils import get_json_schema
+ 
+ from tests.experimental.agent_loop.agent_utils import init_agent_loop_manager
+ from verl.checkpoint_engine import CheckpointEngineManager
+-from verl.experimental.agent_loop.agent_loop import GlobalRequestLoadBalancer, get_trajectory_info
++from verl.experimental.agent_loop.agent_loop import (
++    GlobalRequestLoadBalancer,
++    get_rollout_indices,
++    get_trajectory_info,
++)
+ from verl.protocol import DataProto
+ from verl.tools.base_tool import BaseTool, OpenAIFunctionToolSchema
+ from verl.tools.schemas import ToolResponse
+@@ -455,6 +459,16 @@ async def test_get_trajectory_info():
+     assert trajectory_info == expected_info
+ 
+ 
++def test_get_rollout_indices_before_worker_chunking():
++    sample_indices = [1] * 6 + [3] * 6
++
++    rollout_indices = get_rollout_indices(sample_indices)
++
++    assert rollout_indices == list(range(6)) + list(range(6))
++    assert rollout_indices[:3] == [0, 1, 2]
++    assert rollout_indices[3:6] == [3, 4, 5]
++
++
+ # ──────────────────────────────────────────────────────────────────────
+ # GlobalRequestLoadBalancer unit tests (lightweight, no GPU required)
+ # ──────────────────────────────────────────────────────────────────────
+diff --git a/tests/trainer/ppo/test_metric_utils_on_cpu.py b/tests/trainer/ppo/test_metric_utils_on_cpu.py
+index 863843e2..6c62f67e 100644
+--- a/tests/trainer/ppo/test_metric_utils_on_cpu.py
++++ b/tests/trainer/ppo/test_metric_utils_on_cpu.py
+@@ -24,6 +24,7 @@ import torch
+ from verl.trainer.ppo.metric_utils import (
+     bootstrap_metric,
+     calc_maj_val,
++    compute_agent_loop_metrics,
+     compute_data_metrics,
+     compute_throughout_metrics,
+     compute_timing_metrics,
+@@ -349,6 +350,74 @@ class TestComputeDataMetrics(unittest.TestCase):
+         self.assertIn("response_length/mean", metrics)
+ 
+ 
++class TestComputeAgentLoopMetrics(unittest.TestCase):
++    def test_reports_outcome_local_and_effective_group_signal(self):
++        batch = MagicMock()
++        batch.batch = {
++            "token_level_scores": torch.tensor(
++                [
++                    [1.0, 0.0],
++                    [0.0, 0.0],
++                    [1.0, 0.0],
++                    [1.0, 0.0],
++                ]
++            ),
++            "advantages": torch.tensor(
++                [
++                    [0.5, 0.0],
++                    [-0.5, 0.0],
++                    [0.0, 0.0],
++                    [0.0, 0.25],
++                ]
++            ),
++            "response_mask": torch.ones((4, 2)),
++        }
++        batch.non_tensor_batch = {
++            "uid": np.asarray(["group-1", "group-1", "group-2", "group-2"]),
++            "turn_credit_spans": np.asarray(
++                [
++                    [],
++                    [],
++                    [],
++                    [
++                        {
++                            "new_progress": 0.5,
++                            "new_fact_progress": 0.0,
++                            "model_error": False,
++                        }
++                    ],
++                ],
++                dtype=object,
++            ),
++        }
++
++        metrics = compute_agent_loop_metrics(batch)
++
++        self.assertEqual(metrics["grpo/outcome_signal_group_count"], 1.0)
++        self.assertEqual(metrics["grpo/outcome_signal_group_ratio"], 0.5)
++        self.assertEqual(metrics["grpo/local_signal_group_count"], 1.0)
++        self.assertEqual(metrics["grpo/local_signal_group_ratio"], 0.5)
++        self.assertEqual(metrics["grpo/effective_signal_group_count"], 2.0)
++        self.assertEqual(metrics["grpo/effective_signal_group_ratio"], 1.0)
++
++    def test_vanilla_batch_reports_no_local_signal(self):
++        batch = MagicMock()
++        batch.batch = {
++            "token_level_scores": torch.tensor([[1.0], [1.0]]),
++            "advantages": torch.zeros((2, 1)),
++            "response_mask": torch.ones((2, 1)),
++        }
++        batch.non_tensor_batch = {
++            "uid": np.asarray(["group-1", "group-1"]),
++        }
++
++        metrics = compute_agent_loop_metrics(batch)
++
++        self.assertEqual(metrics["grpo/outcome_signal_group_ratio"], 0.0)
++        self.assertEqual(metrics["grpo/local_signal_group_ratio"], 0.0)
++        self.assertEqual(metrics["grpo/effective_signal_group_ratio"], 0.0)
++
++
+ class TestComputeTimingMetrics(unittest.TestCase):
+     """Tests for the compute_timing_metrics function."""
+ 
+diff --git a/verl/experimental/agent_loop/agent_loop.py b/verl/experimental/agent_loop/agent_loop.py
+index 8879960f..5aa2dd60 100644
+--- a/verl/experimental/agent_loop/agent_loop.py
++++ b/verl/experimental/agent_loop/agent_loop.py
+@@ -513,8 +513,12 @@ class AgentLoopWorker:
+         else:
+             traced_indices = set(range(len(batch)))
+ 
++        rollout_indices = batch.non_tensor_batch.get("rollout_index")
+         trajectory_info = await get_trajectory_info(
+-            batch.meta_info.get("global_steps", -1), index.tolist(), batch.meta_info.get("validate", False)
++            batch.meta_info.get("global_steps", -1),
++            index.tolist(),
++            batch.meta_info.get("validate", False),
++            None if rollout_indices is None else rollout_indices.tolist(),
+         )
+ 
+         tasks = []
+@@ -563,7 +567,11 @@ class AgentLoopWorker:
+                 dataset_cls=self.dataset_cls,
+                 data_config=DictConfigWrap(self.config.data),
+             )
+-            output: AgentLoopOutput = await agent_loop.run(sampling_params, **kwargs)
++            output: AgentLoopOutput = await agent_loop.run(
++                sampling_params,
++                trajectory_info=trajectory,
++                **kwargs,
++            )
+             return await self._agent_loop_postprocess(output, **kwargs)
+ 
+     async def _agent_loop_postprocess(self, output, **kwargs) -> _InternalAgentLoopOutput:
+@@ -877,26 +885,43 @@ class AgentLoopWorker:
+         )
+ 
+ 
+-async def get_trajectory_info(step, index, validate):
++def get_rollout_indices(index):
++    """Assign a zero-based rollout index to each occurrence of a sample."""
++    counts = {}
++    rollout_indices = []
++    for sample_index in index:
++        rollout_index = counts.get(sample_index, 0)
++        rollout_indices.append(rollout_index)
++        counts[sample_index] = rollout_index + 1
++    return rollout_indices
++
++
++async def get_trajectory_info(step, index, validate, rollout_indices=None):
+     """Get trajectory info.
+ 
+     Args:
+         step (int): global steps in the trainer.
+         index (list): form datastore extra_info.index column.
+         validate (bool): whether is a validate step.
++        rollout_indices (list | None): indices assigned before worker sharding.
+ 
+     Returns:
+         list: trajectory.
+     """
+-    trajectory_info = []
+-    rollout_n = 0
+-    for i in range(len(index)):
+-        if i > 0 and index[i - 1] == index[i]:
+-            rollout_n += 1
+-        else:
+-            rollout_n = 0
+-        trajectory_info.append({"step": step, "sample_index": index[i], "rollout_n": rollout_n, "validate": validate})
+-    return trajectory_info
++    if rollout_indices is None:
++        rollout_indices = get_rollout_indices(index)
++    if len(rollout_indices) != len(index):
++        raise ValueError("rollout_indices must have the same length as index")
++
++    return [
++        {
++            "step": step,
++            "sample_index": sample_index,
++            "rollout_n": rollout_index,
++            "validate": validate,
++        }
++        for sample_index, rollout_index in zip(index, rollout_indices, strict=True)
++    ]
+ 
+ 
+ class AgentLoopManager:
+@@ -1037,6 +1062,13 @@ class AgentLoopManager:
+             DataProto: Output batch.
+         """
+ 
++        if "rollout_index" not in prompts.non_tensor_batch:
++            sample_indices = prompts.non_tensor_batch.get("index", np.arange(len(prompts)))
++            prompts.non_tensor_batch["rollout_index"] = np.asarray(
++                get_rollout_indices(sample_indices.tolist()),
++                dtype=np.int64,
++            )
++
+         chunkes = prompts.chunk(len(self.agent_loop_workers))
+         outputs = await asyncio.gather(
+             *[
+diff --git a/verl/models/transformers/dense_common.py b/verl/models/transformers/dense_common.py
+index 56fe293f..92d55c2d 100644
+--- a/verl/models/transformers/dense_common.py
++++ b/verl/models/transformers/dense_common.py
+@@ -83,6 +83,9 @@ def forward_with_torch_backend(
+     cache_position: Optional[torch.LongTensor] = None,
+     logits_to_keep: int | torch.Tensor = 0,
+     temperature: float = 1.0,
++    logits_mask: Optional[torch.Tensor] = None,
++    target_token_ids: Optional[torch.LongTensor] = None,
++    calculate_entropy: bool = True,
+     **loss_kwargs,
+ ) -> tuple | CausalLMOutputForPPO:
+     from verl.utils.experimental.torch_functional import FusedLinearForPPO
+@@ -105,8 +108,12 @@ def forward_with_torch_backend(
+     if not return_dict:
+         raise NotImplementedError("forward_with_torch_backend has to return_dict")
+ 
+-    # Loss calculations
+-    if labels is not None:
++    if logits_mask is not None:
++        if target_token_ids is None:
++            raise RuntimeError("target_token_ids is required when logits_mask is provided")
++        hidden_states = hidden_states[logits_mask.to(torch.bool)]
++        rolled_labels = target_token_ids.reshape(-1)
++    elif labels is not None:
+         rolled_labels = torch.roll(labels, shifts=-1, dims=-1)
+     elif input_ids is not None:
+         rolled_labels = torch.roll(input_ids, shifts=-1, dims=-1)
+@@ -119,6 +126,7 @@ def forward_with_torch_backend(
+         vocab_weights=self.lm_head.weight,
+         input_ids=rolled_labels,
+         temperature=temperature,
++        calculate_entropy=calculate_entropy,
+     )
+ 
+     return CausalLMOutputForPPO(
+diff --git a/verl/trainer/config/algorithm.py b/verl/trainer/config/algorithm.py
+index a53fdd28..250054e1 100644
+--- a/verl/trainer/config/algorithm.py
++++ b/verl/trainer/config/algorithm.py
+@@ -574,6 +574,8 @@ class AlgoConfig(BaseConfig):
+         gamma (float): Discount factor for future rewards.
+         lam (float): Trade-off between bias and variance in the GAE estimator.
+         adv_estimator (str): Advantage estimator type: "gae", "grpo", "reinforce_plus_plus", etc.
++        adv_estimator_module (Optional[str]): Optional module imported before resolving a custom advantage estimator.
++        adv_estimator_kwargs (dict[str, Any]): Keyword arguments forwarded to a custom advantage estimator.
+         norm_adv_by_std_in_grpo (bool): Whether to normalize advantages by std (specific to GRPO).
+         use_kl_in_reward (bool): Whether to enable in-reward KL penalty.
+         kl_penalty (str): How to estimate KL divergence: "kl", "abs", "mse", "low_var_kl", or "full".
+@@ -602,6 +604,8 @@ class AlgoConfig(BaseConfig):
+     gamma: float = 1.0
+     lam: float = 1.0
+     adv_estimator: str = "gae"
++    adv_estimator_module: Optional[str] = None
++    adv_estimator_kwargs: dict[str, Any] = field(default_factory=dict)
+     norm_adv_by_std_in_grpo: bool = True
+     use_kl_in_reward: bool = False
+     kl_penalty: str = "kl"
+diff --git a/verl/trainer/ppo/metric_utils.py b/verl/trainer/ppo/metric_utils.py
+index 4dd7d2d0..02468dc7 100644
+--- a/verl/trainer/ppo/metric_utils.py
++++ b/verl/trainer/ppo/metric_utils.py
+@@ -225,6 +225,283 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
+     return metrics
+ 
+ 
++_AGENT_LOOP_DISTRIBUTIONS = {
++    "assistant_turns": "rollout/assistant_turns",
++    "user_turns": "rollout/user_turns",
++    "tool_call_count": "rollout/tool_call_count",
++    "num_errors": "rollout/errors",
++    "prompt_tokens": "rollout/prompt_tokens",
++    "response_tokens": "rollout/response_tokens",
++    "assistant_tokens": "rollout/assistant_tokens",
++    "observation_tokens": "rollout/observation_tokens",
++    "user_observation_tokens": "rollout/user_observation_tokens",
++    "tool_response_tokens": "rollout/tool_response_tokens",
++    "assistant_tokens_per_turn": "rollout/assistant_tokens_per_turn",
++    "tool_response_tokens_per_call": "rollout/tool_response_tokens_per_call",
++    "trajectory_seconds": "rollout/trajectory_seconds",
++    "generation_seconds": "rollout/generation_seconds",
++    "user_seconds": "rollout/user_seconds",
++    "tool_seconds": "rollout/tool_seconds",
++    "evaluation_seconds": "rollout/evaluation_seconds",
++    "turn_credit_target_field_count": "turn_credit/target_field_count",
++    "turn_credit_final_potential": "turn_credit/final_potential",
++    "turn_credit_best_potential": "turn_credit/best_potential",
++    "turn_credit_total_new_progress": "turn_credit/total_new_progress",
++    "turn_credit_positive_progress_turns": "turn_credit/positive_progress_turns",
++    "turn_credit_target_fact_count": "turn_credit/target_fact_count",
++    "turn_credit_covered_fact_count": "turn_credit/covered_fact_count",
++    "turn_credit_final_fact_potential": "turn_credit/final_fact_potential",
++    "turn_credit_best_fact_potential": "turn_credit/best_fact_potential",
++    "turn_credit_total_new_fact_progress": "turn_credit/total_new_fact_progress",
++    "turn_credit_positive_fact_progress_turns": "turn_credit/positive_fact_progress_turns",
++    "turn_credit_model_error_turns": "turn_credit/model_error_turns",
++}
++
++
++def _sequence_scores(batch: DataProto) -> np.ndarray:
++    scores = batch.batch["token_level_scores"].sum(-1)
++    return scores.detach().float().cpu().numpy()
++
++
++def _numeric_values(batch: DataProto, key: str) -> np.ndarray | None:
++    values = batch.non_tensor_batch.get(key)
++    if values is None:
++        return None
++    return np.asarray(values, dtype=np.float64)
++
++
++def _group_indices(batch: DataProto) -> list[np.ndarray]:
++    group_ids = batch.non_tensor_batch.get("uid")
++    if group_ids is None:
++        group_ids = batch.non_tensor_batch.get("task_id")
++    if group_ids is None:
++        return []
++
++    normalized_ids = np.asarray(group_ids).astype(str)
++    return [np.flatnonzero(normalized_ids == group_id) for group_id in dict.fromkeys(normalized_ids)]
++
++
++def _sample_has_local_signal(spans: list[dict[str, Any]]) -> bool:
++    return any(
++        float(span["new_progress"]) != 0.0
++        or float(span.get("new_fact_progress", 0.0)) != 0.0
++        or bool(span["model_error"])
++        for span in spans
++    )
++
++
++def compute_agent_loop_metrics(batch: DataProto) -> dict[str, float]:
++    """Summarize sequence-level AgentLoop and GRPO signal metrics."""
++
++    scores = _sequence_scores(batch)
++    success_mask = scores > 0.5
++    metrics = {
++        "reward/success_count": float(success_mask.sum()),
++        "reward/failure_count": float((~success_mask).sum()),
++        "reward/success_rate": float(success_mask.mean()),
++        "rollout/valid_trajectories": float(len(scores)),
++    }
++
++    groups = _group_indices(batch)
++    if groups:
++        group_rewards = [scores[indices] for indices in groups]
++        group_means = np.asarray([rewards.mean() for rewards in group_rewards])
++        outcome_signal = np.asarray([np.unique(rewards).size > 1 for rewards in group_rewards])
++
++        turn_credit_spans = batch.non_tensor_batch.get("turn_credit_spans")
++        if turn_credit_spans is None:
++            sample_has_local_signal = np.zeros(len(scores), dtype=bool)
++        else:
++            sample_has_local_signal = np.asarray(
++                [_sample_has_local_signal(spans) for spans in turn_credit_spans],
++                dtype=bool,
++            )
++        local_signal = np.asarray(
++            [sample_has_local_signal[indices].any() for indices in groups],
++            dtype=bool,
++        )
++
++        advantages = batch.batch.get("advantages")
++        response_mask = batch.batch.get("response_mask")
++        if advantages is not None and response_mask is not None:
++            active_advantages = advantages.detach().float().abs() * response_mask
++            sample_has_effective_signal = active_advantages.gt(1e-8).any(dim=-1).cpu().numpy()
++            effective_signal = np.asarray(
++                [sample_has_effective_signal[indices].any() for indices in groups],
++                dtype=bool,
++            )
++        else:
++            effective_signal = outcome_signal | local_signal
++
++        metrics.update(
++            {
++                "grpo/group_count": float(len(groups)),
++                "grpo/mixed_group_count": float(outcome_signal.sum()),
++                "grpo/mixed_group_ratio": float(outcome_signal.mean()),
++                "grpo/zero_signal_group_count": float((~outcome_signal).sum()),
++                "grpo/outcome_signal_group_count": float(outcome_signal.sum()),
++                "grpo/outcome_signal_group_ratio": float(outcome_signal.mean()),
++                "grpo/local_signal_group_count": float(local_signal.sum()),
++                "grpo/local_signal_group_ratio": float(local_signal.mean()),
++                "grpo/effective_signal_group_count": float(effective_signal.sum()),
++                "grpo/effective_signal_group_ratio": float(effective_signal.mean()),
++                "grpo/group_reward_mean_min": float(group_means.min()),
++                "grpo/group_reward_mean_max": float(group_means.max()),
++                "grpo/group_reward_mean": float(group_means.mean()),
++            }
++        )
++
++    for source_key, metric_prefix in _AGENT_LOOP_DISTRIBUTIONS.items():
++        values = _numeric_values(batch, source_key)
++        if values is None:
++            continue
++        metrics[f"{metric_prefix}/mean"] = float(values.mean())
++        metrics[f"{metric_prefix}/p90"] = float(np.percentile(values, 90))
++        metrics[f"{metric_prefix}/max"] = float(values.max())
++
++    retry_counts = _numeric_values(batch, "infrastructure_retry_count")
++    if retry_counts is not None:
++        metrics["infra/retry_attempt_count"] = float(retry_counts.sum())
++        metrics["infra/retried_trajectory_count"] = float((retry_counts > 0).sum())
++
++    preempted = _numeric_values(batch, "num_preempted")
++    if preempted is not None:
++        metrics["rollout/num_preempted"] = float(preempted.sum())
++
++    assistant_tokens = _numeric_values(batch, "assistant_tokens")
++    response_tokens = _numeric_values(batch, "response_tokens")
++    if assistant_tokens is not None and response_tokens is not None and response_tokens.sum() > 0:
++        metrics["rollout/assistant_token_fraction"] = float(assistant_tokens.sum() / response_tokens.sum())
++
++    termination_reasons = batch.non_tensor_batch.get("termination_reason")
++    if termination_reasons is not None:
++        reasons, counts = np.unique(
++            np.asarray(termination_reasons).astype(str),
++            return_counts=True,
++        )
++        for reason, count in zip(reasons, counts, strict=True):
++            metric_reason = reason.replace("-", "_").replace(" ", "_")
++            metrics[f"termination/{metric_reason}_count"] = float(count)
++
++    return metrics
++
++
++def build_grpo_group_table(
++    batch: DataProto,
++    *,
++    step: int,
++    num_rollouts: int,
++) -> tuple[list[str], list[list[Any]]]:
++    """Build one compact row per GRPO prompt group."""
++
++    columns = ["step", "task_id", "group_id", *[f"reward_{index}" for index in range(num_rollouts)]]
++    columns.extend(["group_size", "mean_reward", "reward_std", "mixed"])
++    scores = _sequence_scores(batch)
++    task_ids = np.asarray(batch.non_tensor_batch.get("task_id", [None] * len(scores)))
++    rollout_indices = np.asarray(batch.non_tensor_batch.get("rollout_index", np.arange(len(scores))), dtype=int)
++    group_ids = np.asarray(batch.non_tensor_batch.get("uid", task_ids)).astype(str)
++
++    rows = []
++    for group_id in dict.fromkeys(group_ids):
++        indices = np.flatnonzero(group_ids == group_id)
++        reward_slots: list[float | None] = [None] * num_rollouts
++        for index in indices:
++            rollout_index = int(rollout_indices[index])
++            if 0 <= rollout_index < num_rollouts:
++                reward_slots[rollout_index] = float(scores[index])
++        rewards = scores[indices]
++        rows.append(
++            [
++                step,
++                str(task_ids[indices[0]]),
++                group_id,
++                *reward_slots,
++                len(indices),
++                float(rewards.mean()),
++                float(rewards.std(ddof=1)) if len(rewards) > 1 else 0.0,
++                bool(np.unique(rewards).size > 1),
++            ]
++        )
++    return columns, rows
++
++
++def build_agent_loop_trajectory_table(batch: DataProto, *, step: int) -> tuple[list[str], list[list[Any]]]:
++    """Build metadata-only trajectory rows without uploading conversation text."""
++
++    fields = [
++        "task_id",
++        "rollout_index",
++        "slot_id",
++        "termination_reason",
++        "assistant_turns",
++        "user_turns",
++        "tool_call_count",
++        "num_errors",
++        "assistant_tokens",
++        "observation_tokens",
++        "user_observation_tokens",
++        "tool_response_tokens",
++        "assistant_tokens_per_turn",
++        "tool_response_tokens_per_call",
++        "trajectory_seconds",
++        "generation_seconds",
++        "user_seconds",
++        "num_preempted",
++        "infrastructure_retry_count",
++        "turn_credit_target_field_count",
++        "turn_credit_final_potential",
++        "turn_credit_best_potential",
++        "turn_credit_total_new_progress",
++        "turn_credit_positive_progress_turns",
++        "turn_credit_target_fact_count",
++        "turn_credit_covered_fact_count",
++        "turn_credit_final_fact_potential",
++        "turn_credit_best_fact_potential",
++        "turn_credit_total_new_fact_progress",
++        "turn_credit_positive_fact_progress_turns",
++        "turn_credit_model_error_turns",
++    ]
++    scores = _sequence_scores(batch)
++    columns = ["step", "reward", *fields]
++    rows = []
++    for index, score in enumerate(scores):
++        row = [step, float(score)]
++        for field in fields:
++            values = batch.non_tensor_batch.get(field)
++            value = None if values is None else values[index]
++            row.append(value.item() if isinstance(value, np.generic) else value)
++        rows.append(row)
++    return columns, rows
++
++
++def format_agent_loop_step_summary(metrics: dict[str, Any], *, step: int) -> str:
++    """Render two short terminal lines for a completed training step."""
++
++    successes = int(metrics.get("reward/success_count", 0))
++    trajectories = int(metrics.get("rollout/valid_trajectories", 0))
++    mixed = int(metrics.get("grpo/mixed_group_count", 0))
++    groups = int(metrics.get("grpo/group_count", 0))
++    retries = int(metrics.get("infra/retry_attempt_count", 0))
++    rollout_seconds = float(metrics.get("timing_s/gen", 0.0))
++    reference_seconds = float(metrics.get("timing_s/ref", 0.0))
++    actor_seconds = float(metrics.get("timing_s/update_actor", 0.0))
++    kl_loss = float(metrics.get("actor/kl_loss", 0.0))
++    sync_seconds = float(metrics.get("timing_s/update_weights", 0.0))
++    checkpoint_seconds = float(metrics.get("timing_s/save_checkpoint", 0.0))
++    step_seconds = float(metrics.get("timing_s/step", 0.0))
++    actor_mfu = 100 * float(metrics.get("perf/mfu/actor", 0.0))
++    peak_memory = float(metrics.get("perf/actor_peak_memory_allocated_gb", 0.0))
++    micro_batches = int(metrics.get("actor/dynamic_micro_batch_count", 0))
++    return (
++        f"[step {step}] reward {successes}/{trajectories} | mixed {mixed}/{groups} | "
++        f"rollout {rollout_seconds:.1f}s | retries {retries}\n"
++        f"[step {step}] ref {reference_seconds:.1f}s | actor {actor_seconds:.1f}s | "
++        f"KL {kl_loss:.4f} | sync {sync_seconds:.1f}s | "
++        f"checkpoint {checkpoint_seconds:.1f}s | total {step_seconds:.1f}s | "
++        f"micro_batches {micro_batches} | MFU {actor_mfu:.1f}% | peak {peak_memory:.1f}GB"
++    )
++
++
+ def compute_timing_metrics(batch: DataProto, timing_raw: dict[str, float]) -> dict[str, Any]:
+     """
+     Computes timing metrics for different processing stages in PPO training.
+diff --git a/verl/trainer/ppo/ray_trainer.py b/verl/trainer/ppo/ray_trainer.py
+index e178ffc1..809ec9a5 100644
+--- a/verl/trainer/ppo/ray_trainer.py
++++ b/verl/trainer/ppo/ray_trainer.py
+@@ -18,6 +18,8 @@ PPO Trainer with Ray-based single controller.
+ This trainer supports model-agonistic model initialization with huggingface
+ """
+ 
++import importlib
++import inspect
+ import json
+ import os
+ import uuid
+@@ -43,10 +45,14 @@ from verl.trainer.config import AlgoConfig
+ from verl.trainer.ppo import core_algos
+ from verl.trainer.ppo.core_algos import AdvantageEstimator, agg_loss
+ from verl.trainer.ppo.metric_utils import (
++    build_agent_loop_trajectory_table,
++    build_grpo_group_table,
++    compute_agent_loop_metrics,
+     compute_data_metrics,
+     compute_throughout_metrics,
+     compute_timing_metrics,
+     compute_variance_proxy_metrics,
++    format_agent_loop_step_summary,
+     process_validation_metrics,
+ )
+ from verl.trainer.ppo.reward import extract_reward
+@@ -189,6 +195,9 @@ def compute_advantage(
+         data.batch["returns"] = returns
+     else:
+         # handle all other adv estimator type other than GAE and GRPO
++        adv_estimator_module = config.get("adv_estimator_module", None) if config is not None else None
++        if adv_estimator_module:
++            importlib.import_module(adv_estimator_module)
+         adv_estimator_fn = core_algos.get_adv_estimator_fn(adv_estimator)
+         adv_kwargs = {
+             "token_level_rewards": data.batch["token_level_rewards"],
+@@ -199,10 +208,15 @@ def compute_advantage(
+             adv_kwargs["index"] = data.non_tensor_batch["uid"]
+         if "reward_baselines" in data.batch:  # optional
+             adv_kwargs["reward_baselines"] = data.batch["reward_baselines"]
+-        # GDPO: pass raw data for per-dimension reward extraction
+-        if adv_estimator in (AdvantageEstimator.GDPO, "gdpo"):
++
++        estimator_parameters = inspect.signature(adv_estimator_fn).parameters
++        if "non_tensor_batch" in estimator_parameters:
+             adv_kwargs["non_tensor_batch"] = data.non_tensor_batch
++        if "batch" in estimator_parameters:
+             adv_kwargs["batch"] = data.batch
++
++        estimator_kwargs = config.get("adv_estimator_kwargs", {}) if config is not None else {}
++        adv_kwargs.update(dict(estimator_kwargs))
+         # Add sum_pi_squared for Optimal Token Baseline
+         if adv_estimator in (AdvantageEstimator.OPTIMAL_TOKEN_BASELINE, AdvantageEstimator.TIR_OPTIMAL_TOKEN_BASELINE):
+             # Check if sum_pi_squared is available
+@@ -436,11 +450,19 @@ class RayPPOTrainer:
+             sample_gts = [item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None) for item in batch]
+ 
+             reward_extra_infos_to_dump = reward_extra_infos_dict.copy()
+-            if "request_id" in batch.non_tensor_batch:
+-                reward_extra_infos_dict.setdefault(
+-                    "request_id",
+-                    batch.non_tensor_batch["request_id"].tolist(),
+-                )
++            for key in (
++                "request_id",
++                "task_id",
++                "global_step",
++                "sample_index",
++                "rollout_index",
++                "slot_id",
++            ):
++                if key in batch.non_tensor_batch:
++                    reward_extra_infos_to_dump.setdefault(
++                        key,
++                        batch.non_tensor_batch[key].tolist(),
++                    )
+ 
+             self._dump_generations(
+                 inputs=inputs,
+@@ -1576,6 +1598,7 @@ class RayPPOTrainer:
+                 )
+                 # collect metrics
+                 metrics.update(compute_data_metrics(batch=batch, use_critic=self.use_critic))
++                metrics.update(compute_agent_loop_metrics(batch))
+                 # GDPO per-component reward metrics
+                 gdpo_reward_keys = self.config.algorithm.get("gdpo_reward_keys", None)
+                 if gdpo_reward_keys and self.config.algorithm.adv_estimator in ("gdpo", AdvantageEstimator.GDPO):
+@@ -1599,6 +1622,30 @@ class RayPPOTrainer:
+                 if isinstance(self.train_dataloader.sampler, AbstractCurriculumSampler):
+                     self.train_dataloader.sampler.update(batch=batch)
+ 
++                group_columns, group_rows = build_grpo_group_table(
++                    batch,
++                    step=self.global_steps,
++                    num_rollouts=self.config.actor_rollout_ref.rollout.n,
++                )
++                logger.log_table("grpo/groups", group_columns, group_rows, self.global_steps)
++
++                trajectory_table_freq = int(
++                    os.environ.get("AGENTIC_RL_WANDB_TRAJECTORY_TABLE_FREQ", "0")
++                )
++                if trajectory_table_freq > 0 and self.global_steps % trajectory_table_freq == 0:
++                    trajectory_columns, trajectory_rows = build_agent_loop_trajectory_table(
++                        batch,
++                        step=self.global_steps,
++                    )
++                    logger.log_table(
++                        "rollout/trajectories",
++                        trajectory_columns,
++                        trajectory_rows,
++                        self.global_steps,
++                    )
++
++                print(format_agent_loop_step_summary(metrics, step=self.global_steps))
++
+                 # TODO: make a canonical logger that supports various backend
+                 logger.log(data=metrics, step=self.global_steps)
+ 
+diff --git a/verl/utils/experimental/torch_functional.py b/verl/utils/experimental/torch_functional.py
+index 0b4ce5c6..a8f4e3ce 100644
+--- a/verl/utils/experimental/torch_functional.py
++++ b/verl/utils/experimental/torch_functional.py
+@@ -22,19 +22,22 @@ def _fused_linear_for_ppo_fwd(
+     vocab_weights: torch.FloatTensor,
+     input_ids: torch.LongTensor,
+     temperature: float = 1.0,
+-) -> tuple[torch.FloatTensor, torch.FloatTensor]:
++    calculate_entropy: bool = True,
++) -> tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
+     logits = (hidden_states @ vocab_weights.t()) / temperature
+     orig_dtype = logits.dtype
+     logits = logits.to(torch.float32)
+ 
+-    # Slower but more numerically stable to do log_softmax than probs.log()
+-    probs = logits.softmax(dim=-1)
+-    log_probs = logits.log_softmax(dim=-1)
++    log_normalizer = torch.logsumexp(logits, dim=-1)
++    target_logits = logits.gather(-1, input_ids.unsqueeze(-1)).squeeze(-1)
++    token_log_probs = target_logits - log_normalizer
+ 
+-    token_log_probs = log_probs.gather(-1, input_ids.unsqueeze(-1)).squeeze(-1)
+-    entropy = torch.logsumexp(logits, dim=-1) - torch.sum(probs * logits, dim=-1)
++    entropy = None
++    if calculate_entropy:
++        probs = logits.softmax(dim=-1)
++        entropy = log_normalizer - torch.sum(probs * logits, dim=-1)
+ 
+-    return token_log_probs.to(orig_dtype), entropy.to(orig_dtype)
++    return token_log_probs.to(orig_dtype), None if entropy is None else entropy.to(orig_dtype)
+ 
+ 
+ def _fused_linear_for_ppo_bwd(
+@@ -59,7 +62,7 @@ def _fused_linear_for_ppo_bwd(
+         dlogits += dlog_probs.to(torch.float32).unsqueeze(-1) * (one_hot_input - probs)
+ 
+     # Gradient from entropy
+-    if dentropy is not None:
++    if dentropy is not None and dentropy.numel() > 0:
+         log_probs = logits.log_softmax(dim=-1)
+         entropy = torch.logsumexp(logits, dim=-1) - torch.sum(probs * logits, dim=-1)
+         dlogits += probs * (log_probs + entropy.unsqueeze(-1)) * (-dentropy.unsqueeze(-1))
+@@ -81,6 +84,7 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
+         input_ids: torch.LongTensor,
+         temperature: float = 1.0,
+         chunk_size: int = 512,
++        calculate_entropy: bool = True,
+     ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
+         ctx.set_materialize_grads(False)
+ 
+@@ -100,7 +104,11 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
+         # Allocate memory for outputs
+         output_requires_grad = hidden_states.requires_grad or vocab_weights.requires_grad
+         log_probs = hidden_states.new_zeros(T, requires_grad=output_requires_grad)
+-        entropy = hidden_states.new_zeros(T, requires_grad=output_requires_grad)
++        entropy = (
++            hidden_states.new_zeros(T, requires_grad=output_requires_grad)
++            if calculate_entropy
++            else hidden_states.new_empty(0)
++        )
+ 
+         # Perform forward one chunk at a time
+         for chunk_start in range(0, T, chunk_size):
+@@ -111,14 +119,17 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
+                 vocab_weights=vocab_weights,
+                 input_ids=input_ids[chunk_start:chunk_end],
+                 temperature=temperature,
++                calculate_entropy=calculate_entropy,
+             )
+             log_probs[chunk_start:chunk_end] = chunk_log_probs
+-            entropy[chunk_start:chunk_end] = chunk_entropy
++            if calculate_entropy:
++                entropy[chunk_start:chunk_end] = chunk_entropy
+ 
+         # Cast the output back to the original input dimension
+         if orig_ndim == 3:
+             log_probs = log_probs.view(orig_batch_size, -1)
+-            entropy = entropy.view(orig_batch_size, -1)
++            if calculate_entropy:
++                entropy = entropy.view(orig_batch_size, -1)
+ 
+         ctx.save_for_backward(hidden_states, vocab_weights, input_ids)
+         ctx.orig_batch_size = orig_batch_size
+@@ -162,7 +173,7 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
+             if dlog_probs is not None:
+                 chunk_dlog_probs = dlog_probs[chunk_start:chunk_end]
+             chunk_dentropy = None
+-            if dentropy is not None:
++            if dentropy is not None and dentropy.numel() > 0:
+                 chunk_dentropy = dentropy[chunk_start:chunk_end]
+ 
+             h, v = _fused_linear_for_ppo_bwd(
+@@ -190,6 +201,7 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
+             None,  # input_ids
+             None,  # temperature
+             None,  # chunk_size
++            None,  # calculate_entropy
+         )
+ 
+ 
+@@ -205,12 +217,15 @@ class FusedLinearForPPO(torch.nn.Module):
+         vocab_weights: torch.FloatTensor,
+         input_ids: torch.LongTensor,
+         temperature: float = 1.0,
+-    ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
++        calculate_entropy: bool = True,
++    ) -> tuple[torch.FloatTensor, Optional[torch.FloatTensor]]:
+         input_ids = input_ids.to(torch.int64)
+-        return FusedLinearForPPOFunction.apply(
++        log_probs, entropy = FusedLinearForPPOFunction.apply(
+             hidden_states,
+             vocab_weights,
+             input_ids,
+             temperature,
+             self.chunk_size,
++            calculate_entropy,
+         )
++        return log_probs, entropy if calculate_entropy else None
+diff --git a/verl/utils/tracking.py b/verl/utils/tracking.py
+index f4c1e4a7..e2949712 100644
+--- a/verl/utils/tracking.py
++++ b/verl/utils/tracking.py
+@@ -78,6 +78,10 @@ class Tracking:
+                 settings = wandb.Settings(https_proxy=config["trainer"]["wandb_proxy"])
+             entity = os.environ.get("WANDB_ENTITY", None)
+             wandb.init(project=project_name, name=experiment_name, entity=entity, config=config, settings=settings)
++            manifest_path = os.environ.get("AGENTIC_RL_RUN_MANIFEST_PATH")
++            if manifest_path and Path(manifest_path).is_file():
++                manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
++                wandb.config.update({"agentic_rl_manifest": manifest}, allow_val_change=True)
+             self.logger["wandb"] = wandb
+ 
+         if "trackio" in default_backend:
+@@ -181,7 +185,28 @@ class Tracking:
+     def log(self, data, step, backend=None):
+         for default_backend, logger_instance in self.logger.items():
+             if backend is None or default_backend in backend:
+-                logger_instance.log(data=data, step=step)
++                backend_data = data
++                if default_backend == "wandb":
++                    pending_tables = getattr(self, "_wandb_pending_tables", {}).pop(step, {})
++                    backend_data = {**data, **pending_tables}
++                logger_instance.log(data=backend_data, step=step)
++
++    def log_table(self, name, columns, rows, step):
++        """Append rows to a W&B table while leaving scalar backends unchanged."""
++
++        if "wandb" not in self.logger or not rows:
++            return
++
++        import wandb
++
++        if not hasattr(self, "_wandb_table_rows"):
++            self._wandb_table_rows = {}
++        table_rows = self._wandb_table_rows.setdefault(name, [])
++        table_rows.extend(rows)
++        if not hasattr(self, "_wandb_pending_tables"):
++            self._wandb_pending_tables = {}
++        pending_tables = self._wandb_pending_tables.setdefault(step, {})
++        pending_tables[name] = wandb.Table(columns=columns, data=table_rows)
+ 
+     def __del__(self):
+         if "wandb" in self.logger:
+diff --git a/verl/workers/actor/dp_actor.py b/verl/workers/actor/dp_actor.py
+index c13ffa09..bb08b6fa 100644
+--- a/verl/workers/actor/dp_actor.py
++++ b/verl/workers/actor/dp_actor.py
+@@ -46,6 +46,21 @@ logger = logging.getLogger(__file__)
+ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
+ 
+ 
++def _assistant_target_positions(input_ids: torch.Tensor, response_mask: torch.Tensor) -> torch.Tensor:
++    """Mark hidden-state positions that predict assistant response tokens."""
++    response_length = response_mask.shape[-1]
++    positions = torch.zeros_like(input_ids, dtype=torch.bool)
++    positions[:, -response_length - 1 : -1] = response_mask.to(torch.bool)
++    return positions
++
++
++def _restore_response_values(values: torch.Tensor, response_mask: torch.Tensor) -> torch.Tensor:
++    """Scatter assistant-only values back to VERL's dense response layout."""
++    restored = values.new_zeros(response_mask.shape)
++    restored[response_mask.to(torch.bool)] = values.reshape(-1)
++    return restored
++
++
+ class DataParallelPPOActor(BasePPOActor):
+     """FSDP DataParallel PPO Actor or Ref worker
+ 
+@@ -161,6 +176,14 @@ class DataParallelPPOActor(BasePPOActor):
+             if position_ids.dim() == 3:  # qwen2vl mrope
+                 position_ids = position_ids.transpose(0, 1)  # (bsz, 4, seqlen) -> (4, bsz, seqlen)
+ 
++            use_assistant_only_lm_head = (
++                self.use_fused_kernels and "response_mask" in micro_batch and not self.use_ulysses_sp
++            )
++            if use_assistant_only_lm_head:
++                response_mask = micro_batch["response_mask"]
++                logits_mask = _assistant_target_positions(input_ids, response_mask)
++                target_token_ids = micro_batch["responses"][response_mask.to(torch.bool)]
++
+             if self.use_remove_padding:
+                 input_ids_rmpad, indices, cu_seqlens, *_ = unpad_input(
+                     input_ids.unsqueeze(-1), attention_mask
+@@ -179,6 +202,11 @@ class DataParallelPPOActor(BasePPOActor):
+                         rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices
+                     ).transpose(0, 1)
+ 
++                if use_assistant_only_lm_head:
++                    logits_mask_rmpad = index_first_axis(
++                        rearrange(logits_mask.unsqueeze(-1), "b s ... -> (b s) ..."), indices
++                    ).transpose(0, 1)
++
+                 is_mask_all_zero = attention_mask.sum() == 0
+                 if is_mask_all_zero:
+                     input_ids_rmpad = torch.zeros(
+@@ -240,6 +268,10 @@ class DataParallelPPOActor(BasePPOActor):
+                 if self.use_fused_kernels:
+                     extra_args["temperature"] = temperature
+                     extra_args["return_dict"] = True
++                    extra_args["calculate_entropy"] = calculate_entropy
++                    if use_assistant_only_lm_head:
++                        extra_args["logits_mask"] = logits_mask_rmpad
++                        extra_args["target_token_ids"] = target_token_ids
+ 
+                 output = self.actor_module(
+                     input_ids=input_ids_rmpad,
+@@ -251,8 +283,18 @@ class DataParallelPPOActor(BasePPOActor):
+                 )  # prevent model thinks we are generating
+ 
+                 if self.use_fused_kernels:
+-                    log_probs = output.log_probs.squeeze(0)  # (total_nnz,)
+-                    entropy_rmpad = output.entropy.squeeze(0)  # (total_nnz,)
++                    if use_assistant_only_lm_head:
++                        selected_log_probs = output.log_probs.reshape(-1)
++                        log_probs = selected_log_probs.new_zeros(input_ids_rmpad.shape[-1])
++                        log_probs[logits_mask_rmpad.reshape(-1).to(torch.bool)] = selected_log_probs
++                        if calculate_entropy:
++                            selected_entropy = output.entropy.reshape(-1)
++                            entropy_rmpad = selected_entropy.new_zeros(input_ids_rmpad.shape[-1])
++                            entropy_rmpad[logits_mask_rmpad.reshape(-1).to(torch.bool)] = selected_entropy
++                    else:
++                        log_probs = output.log_probs.squeeze(0)  # (total_nnz,)
++                        if calculate_entropy:
++                            entropy_rmpad = output.entropy.squeeze(0)  # (total_nnz,)
+ 
+                 else:
+                     logits_rmpad = output.logits.squeeze(0)  # (total_nnz, vocab_size)
+@@ -348,6 +390,10 @@ class DataParallelPPOActor(BasePPOActor):
+                 if self.use_fused_kernels:
+                     extra_args["temperature"] = temperature
+                     extra_args["return_dict"] = True
++                    extra_args["calculate_entropy"] = calculate_entropy
++                    if use_assistant_only_lm_head:
++                        extra_args["logits_mask"] = logits_mask
++                        extra_args["target_token_ids"] = target_token_ids
+ 
+                 output = self.actor_module(
+                     input_ids=input_ids,
+@@ -359,8 +405,14 @@ class DataParallelPPOActor(BasePPOActor):
+                 )  # prevent model thinks we are generating
+ 
+                 if self.use_fused_kernels:
+-                    log_probs = output.log_probs[:, -response_length - 1 : -1]
+-                    entropy = output.entropy[:, -response_length - 1 : -1]  # (bsz, response_length)
++                    if use_assistant_only_lm_head:
++                        log_probs = _restore_response_values(output.log_probs, response_mask)
++                        if calculate_entropy:
++                            entropy = _restore_response_values(output.entropy, response_mask)
++                    else:
++                        log_probs = output.log_probs[:, -response_length - 1 : -1]
++                        if calculate_entropy:
++                            entropy = output.entropy[:, -response_length - 1 : -1]  # (bsz, response_length)
+ 
+                 else:
+                     logits = output.logits
+@@ -455,9 +507,12 @@ class DataParallelPPOActor(BasePPOActor):
+         has_multi_modal_inputs = "multi_modal_inputs" in data.non_tensor_batch.keys()
+ 
+         select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
++        if "response_mask" in data.batch:
++            select_keys.append("response_mask")
+         non_tensor_select_keys = ["multi_modal_inputs"] if has_multi_modal_inputs else []
+         if self.use_prefix_grouper:
+-            select_keys += [k for k in ["prompts", "response_mask"] if k in data.batch]
++            if "prompts" in data.batch:
++                select_keys.append("prompts")
+             if "uid" in data.non_tensor_batch:
+                 non_tensor_select_keys.append("uid")
+ 
+@@ -553,11 +608,17 @@ class DataParallelPPOActor(BasePPOActor):
+             "actor/pg_loss": 0.0,
+             "actor/kl_loss": 0.0,
+         }
++        dynamic_micro_batch_sizes = []
++        dynamic_micro_batch_tokens = []
+         for _ in range(self.config.ppo_epochs):
+             for batch_idx, mini_batch in enumerate(mini_batches):
+                 if self.config.use_dynamic_bsz:
+                     max_token_len = self.config.ppo_max_token_len_per_gpu * self.ulysses_sequence_parallel_size
+                     micro_batches, _ = prepare_dynamic_batch(mini_batch, max_token_len=max_token_len)
++                    dynamic_micro_batch_sizes.extend(len(batch) for batch in micro_batches)
++                    dynamic_micro_batch_tokens.extend(
++                        int(batch.batch["attention_mask"].sum().item()) for batch in micro_batches
++                    )
+                 else:
+                     self.gradient_accumulation = (
+                         self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+@@ -672,5 +733,19 @@ class DataParallelPPOActor(BasePPOActor):
+                 grad_norm = self._optimizer_step()
+                 mini_batch_metrics = {"actor/grad_norm": grad_norm.detach().item()}
+                 append_to_dict(metrics, mini_batch_metrics)
++        if dynamic_micro_batch_sizes:
++            metrics.update(
++                {
++                    "actor/dynamic_micro_batch_count": len(dynamic_micro_batch_sizes),
++                    "actor/dynamic_micro_batch_size_min": min(dynamic_micro_batch_sizes),
++                    "actor/dynamic_micro_batch_size_max": max(dynamic_micro_batch_sizes),
++                    "actor/dynamic_micro_batch_size_mean": sum(dynamic_micro_batch_sizes)
++                    / len(dynamic_micro_batch_sizes),
++                    "actor/dynamic_micro_batch_tokens_min": min(dynamic_micro_batch_tokens),
++                    "actor/dynamic_micro_batch_tokens_max": max(dynamic_micro_batch_tokens),
++                    "actor/dynamic_micro_batch_tokens_mean": sum(dynamic_micro_batch_tokens)
++                    / len(dynamic_micro_batch_tokens),
++                }
++            )
+         self.actor_optimizer.zero_grad()
+         return metrics
+diff --git a/verl/workers/fsdp_workers.py b/verl/workers/fsdp_workers.py
+index 155ac6d7..d5a0c6a4 100644
+--- a/verl/workers/fsdp_workers.py
++++ b/verl/workers/fsdp_workers.py
+@@ -1003,6 +1003,11 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
+         if self._is_offload_optimizer:
+             load_fsdp_optimizer(optimizer=self.actor_optimizer, device_id=get_device_id())
+ 
++        device = get_torch_device()
++        worker_peak_before_actor = device.max_memory_allocated()
++        actor_memory_before = device.memory_allocated()
++        device.reset_peak_memory_stats()
++
+         with self.ulysses_sharding_manager:
+             data = data.to("cpu")  # data will to device with each micro batch on actor.update_policy
+             data.meta_info.setdefault("pad_token_id", self.tokenizer.pad_token_id)
+@@ -1018,8 +1023,15 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
+             metrics["perf/mfu/actor"] = (
+                 estimated_flops * self.config.actor.ppo_epochs / promised_flops / self.world_size
+             )
+-            metrics["perf/max_memory_allocated_gb"] = get_torch_device().max_memory_allocated() / (1024**3)
+-            metrics["perf/max_memory_reserved_gb"] = get_torch_device().max_memory_reserved() / (1024**3)
++            actor_peak_allocated = device.max_memory_allocated()
++            actor_peak_reserved = device.max_memory_reserved()
++            metrics["perf/worker_peak_before_actor_gb"] = worker_peak_before_actor / (1024**3)
++            metrics["perf/actor_memory_before_gb"] = actor_memory_before / (1024**3)
++            metrics["perf/actor_memory_after_gb"] = device.memory_allocated() / (1024**3)
++            metrics["perf/actor_peak_memory_allocated_gb"] = actor_peak_allocated / (1024**3)
++            metrics["perf/actor_peak_memory_reserved_gb"] = actor_peak_reserved / (1024**3)
++            metrics["perf/max_memory_allocated_gb"] = actor_peak_allocated / (1024**3)
++            metrics["perf/max_memory_reserved_gb"] = actor_peak_reserved / (1024**3)
+             metrics["perf/cpu_memory_used_gb"] = psutil.virtual_memory().used / (1024**3)
+ 
+             lr = self.actor_lr_scheduler.get_last_lr()[0]
+diff --git a/tests/models/test_assistant_only_lm_head.py b/tests/models/test_assistant_only_lm_head.py
+new file mode 100644
+index 00000000..7c568b0e
+--- /dev/null
++++ b/tests/models/test_assistant_only_lm_head.py
+@@ -0,0 +1,82 @@
++import copy
++
++import torch
++from transformers import AutoModelForCausalLM, Qwen3Config
++
++from verl.models.transformers.dense_common import forward_with_torch_backend
++from verl.workers.actor.dp_actor import _assistant_target_positions, _restore_response_values
++
++
++def _tiny_qwen3() -> torch.nn.Module:
++    config = Qwen3Config(
++        vocab_size=97,
++        hidden_size=32,
++        intermediate_size=64,
++        num_hidden_layers=2,
++        num_attention_heads=4,
++        num_key_value_heads=2,
++        head_dim=8,
++        max_position_embeddings=64,
++        use_cache=False,
++    )
++    return AutoModelForCausalLM.from_config(config, torch_dtype=torch.float32)
++
++
++def test_assistant_only_lm_head_matches_dense_log_probs_and_gradients():
++    torch.manual_seed(7)
++    reference_model = _tiny_qwen3().eval()
++    optimized_model = copy.deepcopy(reference_model).eval()
++
++    input_ids = torch.randint(0, 97, (2, 9))
++    attention_mask = torch.ones_like(input_ids)
++    position_ids = torch.arange(input_ids.shape[1]).expand_as(input_ids)
++    responses = input_ids[:, -4:]
++    response_mask = torch.tensor([[1, 0, 1, 1], [0, 1, 1, 0]], dtype=torch.bool)
++    predictor_mask = _assistant_target_positions(input_ids, response_mask)
++    target_token_ids = responses[response_mask]
++    loss_weights = torch.tensor([0.2, -0.4, 0.8, 0.3, -0.7])
++
++    reference_logits = reference_model(
++        input_ids=input_ids,
++        attention_mask=attention_mask,
++        position_ids=position_ids,
++        use_cache=False,
++    ).logits[predictor_mask]
++    reference_log_probs = reference_logits.log_softmax(dim=-1).gather(
++        -1, target_token_ids.unsqueeze(-1)
++    ).squeeze(-1)
++
++    optimized_output = forward_with_torch_backend(
++        optimized_model,
++        input_ids=input_ids,
++        attention_mask=attention_mask,
++        position_ids=position_ids,
++        use_cache=False,
++        return_dict=True,
++        logits_mask=predictor_mask,
++        target_token_ids=target_token_ids,
++        calculate_entropy=False,
++    )
++
++    assert optimized_output.entropy is None
++    torch.testing.assert_close(optimized_output.log_probs, reference_log_probs, atol=1e-5, rtol=1e-5)
++
++    (reference_log_probs * loss_weights).sum().backward()
++    (optimized_output.log_probs * loss_weights).sum().backward()
++    for (_, reference_parameter), (_, optimized_parameter) in zip(
++        reference_model.named_parameters(), optimized_model.named_parameters(), strict=True
++    ):
++        if reference_parameter.grad is None:
++            assert optimized_parameter.grad is None
++        else:
++            torch.testing.assert_close(
++                optimized_parameter.grad,
++                reference_parameter.grad,
++                atol=2e-5,
++                rtol=2e-5,
++            )
++
++    restored = _restore_response_values(optimized_output.log_probs, response_mask)
++    assert restored.shape == response_mask.shape
++    torch.testing.assert_close(restored[response_mask], optimized_output.log_probs)
++    assert torch.count_nonzero(restored[~response_mask]) == 0

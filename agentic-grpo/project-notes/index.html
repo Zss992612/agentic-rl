@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Agentic RL 项目研究笔记：记录问题、实现、实验与结论。"
+    />
+    <title>Agentic RL 项目研究笔记</title>
+    <script>
+      (() => {
+        const saved = localStorage.getItem("agentic-rl-notes-theme");
+        document.documentElement.dataset.theme = saved || "light";
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f1eee7;
+        --sheet: #fffefb;
+        --ink: #232321;
+        --heading: #11110f;
+        --muted: #747169;
+        --line: #d8d3c8;
+        --soft: #f5f2eb;
+        --accent: #292927;
+        --best: #eeece5;
+        --shadow: 0 16px 56px rgba(62, 55, 44, 0.07);
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --paper: #171816;
+        --sheet: #20211e;
+        --ink: #e6e3db;
+        --heading: #faf8f2;
+        --muted: #aaa69c;
+        --line: #3b3c37;
+        --soft: #292a26;
+        --accent: #f0ede5;
+        --best: #2b2c28;
+        --shadow: 0 16px 56px rgba(0, 0, 0, 0.2);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--ink);
+        background-color: var(--paper);
+        background-image: radial-gradient(
+          color-mix(in srgb, var(--ink) 8%, transparent) 0.6px,
+          transparent 0.6px
+        );
+        background-size: 18px 18px;
+        font-family:
+          Georgia, "Noto Serif SC", "Songti SC", STSong, "Times New Roman",
+          serif;
+        font-size: 16px;
+        line-height: 1.9;
+      }
+
+      a,
+      button {
+        font: inherit;
+      }
+
+      .reading-progress {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 30;
+        height: 2px;
+        background: transparent;
+      }
+
+      .reading-progress span {
+        display: block;
+        width: 0;
+        height: 100%;
+        background: var(--accent);
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 46px;
+        left: max(22px, calc(50vw - 640px));
+        z-index: 10;
+        width: 188px;
+        color: var(--muted);
+      }
+
+      .sidebar-title {
+        margin: 0 0 14px;
+        color: var(--heading);
+        font-family:
+          Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+      }
+
+      .sidebar nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .sidebar a {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        padding: 7px 9px;
+        border-left: 2px solid transparent;
+        color: var(--muted);
+        font-family:
+          Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 13px;
+        line-height: 1.45;
+        text-decoration: none;
+        transition:
+          color 150ms ease,
+          border-color 150ms ease,
+          background 150ms ease;
+      }
+
+      .sidebar a:hover {
+        color: var(--heading);
+        background: color-mix(in srgb, var(--sheet) 72%, transparent);
+      }
+
+      .sidebar a.active {
+        border-left-color: var(--accent);
+        color: var(--heading);
+        font-weight: 700;
+      }
+
+      .sidebar-index {
+        color: color-mix(in srgb, var(--muted) 65%, transparent);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+        font-weight: 400;
+      }
+
+      .theme-toggle {
+        margin-top: 22px;
+        padding: 7px 9px;
+        border: 0;
+        border-left: 2px solid var(--line);
+        color: var(--muted);
+        background: transparent;
+        cursor: pointer;
+        font-family:
+          Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 12px;
+        text-align: left;
+      }
+
+      .theme-toggle:hover,
+      .theme-toggle:focus-visible {
+        border-left-color: var(--accent);
+        color: var(--heading);
+        outline: none;
+      }
+
+      main {
+        width: min(820px, 100%);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 58px 58px 110px;
+        border-right: 1px solid
+          color-mix(in srgb, var(--muted) 22%, transparent);
+        border-left: 1px solid
+          color-mix(in srgb, var(--muted) 22%, transparent);
+        background: color-mix(in srgb, var(--sheet) 97%, transparent);
+        box-shadow: var(--shadow);
+      }
+
+      section,
+      article {
+        scroll-margin-top: 30px;
+      }
+
+      header {
+        margin-bottom: 48px;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        color: var(--heading);
+        font-weight: 700;
+        line-height: 1.42;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(29px, 5vw, 36px);
+        letter-spacing: -0.025em;
+      }
+
+      h2 {
+        margin: 52px 0 18px;
+        padding-bottom: 7px;
+        border-bottom: 2px solid var(--accent);
+        font-size: 21px;
+      }
+
+      h3 {
+        margin: 31px 0 10px;
+        font-size: 17px;
+      }
+
+      h4 {
+        margin: 27px 0 9px;
+        font-size: 15px;
+      }
+
+      p {
+        margin: 0 0 14px;
+        text-align: justify;
+      }
+
+      ul,
+      ol {
+        margin: 9px 0 18px 23px;
+        padding: 0;
+      }
+
+      li {
+        margin-bottom: 7px;
+        padding-left: 3px;
+      }
+
+      .subtitle,
+      .english,
+      .meta,
+      .formula-note,
+      footer {
+        color: var(--muted);
+      }
+
+      .subtitle {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .english {
+        margin: -12px 0 25px;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        text-align: left;
+      }
+
+      .lead {
+        font-size: 17px;
+      }
+
+      .note {
+        margin: 24px 0;
+        padding: 12px 17px;
+        border-left: 3px solid var(--accent);
+        background: var(--soft);
+        font-size: 15px;
+      }
+
+      .note p:last-child {
+        margin-bottom: 0;
+      }
+
+      .process-line {
+        overflow-x: auto;
+        margin: 23px 0;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+        font-weight: 600;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .research-path {
+        margin: 22px 0 0;
+        padding: 0;
+        border-top: 1px solid var(--line);
+        list-style: none;
+      }
+
+      .research-path li {
+        display: grid;
+        grid-template-columns: 54px minmax(0, 1fr);
+        gap: 12px;
+        margin: 0;
+        padding: 16px 2px 17px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .research-path .index {
+        padding-top: 3px;
+        color: var(--muted);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+      }
+
+      .research-path h3 {
+        margin: 0 0 4px;
+      }
+
+      .research-path p {
+        margin: 0;
+      }
+
+      .meta {
+        display: block;
+        margin-top: 5px;
+        font-family:
+          Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        margin: 22px 0;
+        border-top: 1px solid var(--accent);
+        border-bottom: 1px solid var(--accent);
+      }
+
+      table {
+        width: 100%;
+        min-width: 640px;
+        border-collapse: collapse;
+        font-family:
+          Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 13.5px;
+        line-height: 1.55;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      tbody tr.best {
+        background: var(--best);
+      }
+
+      details {
+        border-top: 1px solid var(--line);
+      }
+
+      details:last-of-type {
+        border-bottom: 1px solid var(--line);
+      }
+
+      summary {
+        padding: 13px 2px;
+        color: var(--heading);
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      details > div {
+        padding: 0 2px 15px;
+      }
+
+      details p:last-child {
+        margin-bottom: 0;
+      }
+
+      .formula,
+      pre {
+        overflow-x: auto;
+        margin: 21px 0 13px;
+        padding: 17px 20px;
+        border-left: 3px solid var(--accent);
+        background: var(--soft);
+      }
+
+      .formula {
+        text-align: center;
+      }
+
+      .formula-note {
+        margin-top: -5px;
+        font-size: 13px;
+        text-align: center;
+      }
+
+      code,
+      pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 13px;
+      }
+
+      code {
+        padding: 0.1em 0.32em;
+        background: var(--soft);
+      }
+
+      pre code {
+        padding: 0;
+        background: transparent;
+      }
+
+      footer {
+        margin-top: 64px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        font-size: 12px;
+      }
+
+      @media (max-width: 1239px) {
+        body {
+          padding-top: 52px;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          display: flex;
+          align-items: stretch;
+          width: 100%;
+          height: 52px;
+          padding: 0 18px;
+          border-bottom: 1px solid var(--line);
+          background: color-mix(in srgb, var(--paper) 94%, transparent);
+          backdrop-filter: blur(12px);
+          overflow-x: auto;
+        }
+
+        .sidebar-title {
+          display: none;
+        }
+
+        .sidebar nav {
+          flex-direction: row;
+          align-items: stretch;
+          gap: 7px;
+          min-width: max-content;
+        }
+
+        .sidebar a {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0 8px;
+          border-bottom: 2px solid transparent;
+          border-left: 0;
+        }
+
+        .sidebar a.active {
+          border-bottom-color: var(--accent);
+        }
+
+        .theme-toggle {
+          flex: 0 0 auto;
+          margin: 0 0 0 8px;
+          padding: 0 10px;
+          border-top: 0;
+          border-right: 0;
+          border-bottom: 0;
+        }
+
+        section,
+        article {
+          scroll-margin-top: 72px;
+        }
+      }
+
+      @media (max-width: 620px) {
+        main {
+          padding: 36px 22px 72px;
+          border: 0;
+          box-shadow: none;
+        }
+
+        h2 {
+          margin-top: 42px;
+        }
+
+        .research-path li {
+          grid-template-columns: 42px minmax(0, 1fr);
+        }
+
+        .process-line {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="reading-progress" aria-hidden="true">
+      <span id="progress-bar"></span>
+    </div>
+
+    <aside class="sidebar" aria-label="笔记目录">
+      <p class="sidebar-title">CONTENTS</p>
+      <nav id="note-nav">
+        <a class="active" href="#overview" aria-current="location">
+          <span class="sidebar-index">01</span>
+          <span>项目概览</span>
+        </a>
+        <a href="#thread">
+          <span class="sidebar-index">02</span>
+          <span>研究主线</span>
+        </a>
+        <a href="#evidence">
+          <span class="sidebar-index">03</span>
+          <span>当前证据</span>
+        </a>
+        <a href="#data-construction">
+          <span class="sidebar-index">04</span>
+          <span>数据构建</span>
+        </a>
+        <a href="#next">
+          <span class="sidebar-index">05</span>
+          <span>后续笔记</span>
+        </a>
+      </nav>
+      <button class="theme-toggle" id="theme-toggle" type="button">
+        阅读模式 · <span id="theme-label">浅色</span>
+      </button>
+    </aside>
+
+    <main>
+      <header>
+        <h1>长轨迹 Agent 强化学习项目笔记</h1>
+        <p class="subtitle">记录已经验证的内容；边复盘、边理解、边补充。</p>
+      </header>
+
+      <section id="overview" aria-labelledby="overview-title">
+        <h2 id="overview-title">01 · 项目概览</h2>
+        <p class="english">Project Overview</p>
+        <p class="lead">
+          这个项目研究的是：在 τ²-bench Retail
+          的长链路、多工具交互任务中，怎样训练一个能够理解用户意图、读取环境、调用工具并正确修改数据库的
+          Qwen3-4B Agent。
+        </p>
+
+        <h3>1.1 核心问题</h3>
+        <p>
+          一条 Retail 轨迹通常包含几十轮对话、多个读取操作和若干可能改变数据库的写操作。环境最终只返回成功或失败，因此最终奖励无法直接说明中间哪一个
+          Assistant turn 做对了、哪一个动作造成了失败。这就是本项目真正要处理的长轨迹信用分配问题。
+        </p>
+
+        <h3>1.2 研究策略</h3>
+        <p>
+          项目并没有从复杂奖励函数开始，而是先建立可工作的 SFT 与 Vanilla GRPO
+          基线，再根据真实失败轨迹逐步修改训练信号。整个过程依次经历了数据构建、协议排错、训练基础设施优化、第一版局部奖励实验，以及最终的
+          Anchored Turn GRPO。
+        </p>
+
+        <p class="process-line">
+          数据与 SFT → 在线 Agent 训练 → Vanilla GRPO → 失败归因 → 细粒度信用分配
+        </p>
+
+        <div class="note">
+          <p>
+            <strong>当前理解：</strong>项目的价值不只在于跑通 GRPO，而在于形成了“发现问题—修改实现—控制实验—统一评测—配对归因”的完整研究闭环。
+          </p>
+        </div>
+      </section>
+
+      <article id="thread" aria-labelledby="thread-title">
+        <h2 id="thread-title">02 · 研究主线</h2>
+        <p class="english">Research Thread</p>
+        <p>
+          这里暂时只记录改变项目方向的关键节点。每个节点的实现细节、数据流和公式将在后续复盘时逐段补入。
+        </p>
+
+        <ol class="research-path">
+          <li>
+            <span class="index">2.1</span>
+            <div>
+              <h3>构建 SFT 数据与 Agent 基线</h3>
+              <p>
+                从 512 条候选轨迹中筛选 256 条成功轨迹，覆盖 64
+                个训练任务；使用 Assistant-only Loss 完成 LoRA SFT。
+              </p>
+              <span class="meta">Data · SFT</span>
+            </div>
+          </li>
+          <li>
+            <span class="index">2.2</span>
+            <div>
+              <h3>定位 Chat Template 协议错位</h3>
+              <p>
+                空 think 前缀改变了模型学习到的工具调用 token
+                协议，使在线模型无法正确发起工具调用。统一 no-think 模板后，工具能力恢复。
+              </p>
+              <span class="meta">Protocol</span>
+            </div>
+          </li>
+          <li>
+            <span class="index">2.3</span>
+            <div>
+              <h3>跑通 Vanilla GRPO 系统</h3>
+              <p>
+                接入 VERL、vLLM、FSDP 与异步 AgentLoop，形成
+                4 tasks × 8 rollouts 的单卡在线训练流程。
+              </p>
+              <span class="meta">Training System</span>
+            </div>
+          </li>
+          <li>
+            <span class="index">2.4</span>
+            <div>
+              <h3>解决长序列训练瓶颈</h3>
+              <p>
+                引入 remove padding、FlashAttention varlen、Assistant-only LM
+                Head、动态 micro-batch 和 rollout log-prob bypass，降低冗余计算并提高训练吞吐。
+              </p>
+              <span class="meta">AI Infra</span>
+            </div>
+          </li>
+          <li>
+            <span class="index">2.5</span>
+            <div>
+              <h3>第一版 Potential GRPO 暴露问题</h3>
+              <p>
+                直接把局部进度和固定错误惩罚叠加到 outcome advantage
+                上，会改变原始训练信号的尺度，甚至让失败轨迹中的局部动作获得错误方向的更新。
+              </p>
+              <span class="meta">V1 · Lesson</span>
+            </div>
+          </li>
+          <li>
+            <span class="index">2.6</span>
+            <div>
+              <h3>提出 Anchored Turn GRPO</h3>
+              <p>
+                新方案只在成功轨迹内部重新分配信用，并保持 outcome advantage
+                的符号和 token 加权均值，避免局部奖励覆盖最终任务目标。
+              </p>
+              <span class="meta">V2 · Method</span>
+            </div>
+          </li>
+          <li>
+            <span class="index">2.7</span>
+            <div>
+              <h3>统一评测与配对错误归因</h3>
+              <p>
+                在相同 User API、任务、trial 和 seed
+                下比较 SFT、Vanilla 与 Anchored，再逐条检查成功翻转和回归轨迹的决定性差异。
+              </p>
+              <span class="meta">Evaluation</span>
+            </div>
+          </li>
+        </ol>
+      </article>
+
+      <article id="evidence" aria-labelledby="evidence-title">
+        <h2 id="evidence-title">03 · 当前证据</h2>
+        <p class="english">Current Evidence</p>
+        <p class="lead">
+          统一使用 DeepSeek 官方 User API，在 40 个测试任务上各采样 4
+          次。Anchored step80 共成功 114/160 次，Pass¹ 为
+          71.25%；完全失败任务从 5 个减少到 2 个。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>模型</th>
+                <th>成功</th>
+                <th>Pass¹</th>
+                <th>Pass²</th>
+                <th>Pass³</th>
+                <th>Pass⁴</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>SFT step96</td>
+                <td>106 / 160</td>
+                <td>66.25%</td>
+                <td>52.50%</td>
+                <td>43.75%</td>
+                <td>37.50%</td>
+              </tr>
+              <tr>
+                <td>Vanilla step100</td>
+                <td>109 / 160</td>
+                <td>68.12%</td>
+                <td>55.83%</td>
+                <td>48.75%</td>
+                <td><strong>45.00%</strong></td>
+              </tr>
+              <tr class="best">
+                <td>Anchored step80</td>
+                <td><strong>114 / 160</strong></td>
+                <td><strong>71.25%</strong></td>
+                <td>54.17%</td>
+                <td>41.88%</td>
+                <td>32.50%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>3.1 当前结果说明了什么</h3>
+        <p>
+          Anchored 提高了单次采样的成功覆盖率，也让一部分原本完全不会做的困难任务变得可解；与此同时，4/4
+          稳定成功任务减少，说明当前方法在覆盖率与重复采样可靠性之间仍存在权衡。
+        </p>
+
+        <div class="note">
+          <p>
+            <strong>配对归因：</strong>在 23 条 Vanilla 失败、Anchored
+            成功的轨迹中，必需写操作遗漏由 7 条降至 0 条，非目标写操作由 6 条降至 2
+            条。改善主要表现为更好的写前决策、动作顺序和实体绑定，而不是单纯增加工具调用次数。
+          </p>
+        </div>
+
+        <details>
+          <summary>进一步展开：当前仍然存在的回归</summary>
+          <div>
+            <p>
+              回归主要来自错误拒绝可执行操作、跨订单状态绑定、不可逆动作顺序和参数选择。它们说明当前的 turn
+              级奖励只能改善一部分写操作决策，还不能稳定解决全部长链路推理问题。
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary>进一步展开：结论边界</summary>
+          <div>
+            <p>
+              当前结果是方向性的数值提升，不能声称统计显著或全面优于 Vanilla；Vanilla step100 与
+              Anchored step80 也包含 checkpoint
+              选择差异。测试集已经用于错误分析，后续若继续调整算法，需要使用新的未分析数据确认。
+            </p>
+          </div>
+        </details>
+      </article>
+
+      <section id="data-construction" aria-labelledby="data-title">
+        <h2 id="data-title">04 · 数据构建：先获得可学习的工具轨迹</h2>
+        <p class="english">讨论记录 · 2026.09.05 · 第一轮梳理</p>
+        <p>
+          这一阶段的目标，是给学生模型提供完整的多轮工具使用示范：什么时候追问用户、
+          什么时候查询信息、怎样组织工具参数，以及执行后如何继续对话。训练样本的基本单位是一条完整轨迹，
+          其中包含多轮消息和工具执行结果；256 条轨迹不等于 256 条单轮问答。
+        </p>
+        <h3>4.1 项目里怎么做：谁产生了数据？</h3>
+        <p>
+          从官方 Retail 的 74 个训练任务中固定划出 64 个训练任务和 10 个验证任务，
+          官方 40 个测试任务另行保留。本次 SFT 数据采集只使用这 64 个训练任务。
+          DeepSeek Flash 分别承担两个角色：User Simulator 根据隐藏的用户任务与 Agent 对话；
+          Teacher Agent 根据可见对话和业务规则回复或发起工具调用。工具返回由 Retail 环境实际执行产生，
+          不是让 Teacher 编造一段工具结果。
+        </p>
+        <p>
+          每个训练任务采集 8 条轨迹，共 512 条。Teacher Agent 使用 0.2、0.6、0.9 三档温度，
+          每任务分别采集 2、4、2 条；用户模拟器温度为 0.0。这样既保持任务覆盖，
+          也获得不同表达和工具路径的候选。低温度不能保证外部 API 完全确定，用户模拟器仍可能偏离任务。
+        </p>
+        <h3>4.2 从候选到训练数据：先记住这条主线</h3>
+        <p class="process-line">512 条候选 → 451 条硬检查通过 → 435 条语义接受 → 256 条最终入选</p>
+        <p>
+          硬检查确认终局结果及结构要求；Teacher 语义检查进一步核对用户意图、业务确认过程和回复一致性；
+          最终选择兼顾质量、任务覆盖与多样性。256 条数据覆盖全部 64 个任务，
+          每任务实际保留 2～8 条，并不是固定各留 4 条。
+        </p>
+        <p>
+          这里的“干净”同时指质量筛选与格式整理。通过筛选不代表每一步都无错误：
+          最终仍有 12 条带工具错误复查标记的轨迹。整理后的模型输入保留 System、User、Assistant、Tool
+          消息与工具 Schema，排除隐藏任务答案和验证器参考信息。具体保留与删除规则下一次再展开。
+        </p>
+        <h3>4.3 为什么这样做，以及取舍</h3>
+        <p>
+          终局成功并不能保证过程适合模仿，因此不能仅按 reward=1 选 SFT 数据。
+          增加语义检查可以发现确认遗漏、用户任务失真及最终回复不一致，但也引入 Teacher 的判断误差和 API 成本。
+          目前记录支持这些筛选确实执行过；还没有据此证明每一项筛选都独立提高了模型表现。
+        </p>
+        <h3>4.4 面试表述草稿</h3>
+        <blockquote>
+          我们先在 64 个训练任务上采集 512 条多轮交互轨迹，由模型分别扮演用户和示范 Agent，
+          工具由真实环境执行。考虑到终局成功不保证过程质量，再经过硬检查、语义筛选以及覆盖和多样性选择，
+          得到 256 条 SFT 轨迹。之后才进入消息标准化、模板渲染、分词和监督 mask 构建。
+        </blockquote>
+        <p class="meta">
+          证据：<a href="../docs/data/retail_sft_data_construction_summary.md">数据构建阶段总结</a>；
+          <a href="../data/sft/retail_serial_v3/selection_summary.json">最终选择统计</a>；
+          <a href="../configs/data/retail_split.yaml">任务划分</a>。
+          本节记录项目实际流程，个人负责的设计与实现范围将在简历表述定稿时确认。
+        </p>
+        <p><strong>下一次讨论：</strong>硬检查到底筛什么？为什么有些 reward=1 的轨迹仍要拒绝？</p>
+      </section>
+
+      <section id="next" aria-labelledby="next-title">
+        <h2 id="next-title">05 · 后续笔记</h2>
+        <p class="english">To Be Continued</p>
+        <p>
+          不预先锁死完整目录。接下来按照真实复盘顺序，从下列主题中逐项选择并写清楚；新内容出现后，再自然扩展左侧目录。
+        </p>
+        <ol>
+          <li>τ²-bench Retail 的任务、环境状态与评测方式。</li>
+          <li>训练数据如何产生，以及一条 SFT 样本怎样进入模型。</li>
+          <li>一个 GRPO step 从 rollout 到参数更新的完整张量数据流。</li>
+          <li>Potential V1 为什么失败，Anchored V2 怎样保持 outcome anchor。</li>
+          <li>W&amp;B 曲线、系统效率、简历表达与面试追问。</li>
+        </ol>
+
+        <p class="note">
+          这份笔记是项目的事实源。最终项目展示页将在内容梳理完成后，从这里提炼问题、方法、结果和工程亮点。
+        </p>
+      </section>
+
+      <!-- 后续章节按复盘进度添加，不在初版中预设完整目录。 -->
+      <footer>最近整理：2026-09-04 · 持续补充中</footer>
+    </main>
+
+    <script>
+      const root = document.documentElement;
+      const toggle = document.getElementById("theme-toggle");
+      const themeLabel = document.getElementById("theme-label");
+      const progressBar = document.getElementById("progress-bar");
+      const navLinks = [...document.querySelectorAll("#note-nav a")];
+      const sections = navLinks
+        .map((link) => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+
+      function syncThemeLabel() {
+        themeLabel.textContent = root.dataset.theme === "dark" ? "深色" : "浅色";
+      }
+
+      toggle.addEventListener("click", () => {
+        root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+        localStorage.setItem("agentic-rl-notes-theme", root.dataset.theme);
+        syncThemeLabel();
+      });
+
+      function updateReadingState() {
+        const scrollable = document.documentElement.scrollHeight - innerHeight;
+        const ratio = scrollable > 0 ? Math.min(1, scrollY / scrollable) : 0;
+        progressBar.style.width = `${ratio * 100}%`;
+
+        let current = sections[0]?.id;
+        for (const section of sections) {
+          if (section.getBoundingClientRect().top <= 180) current = section.id;
+        }
+
+        navLinks.forEach((link) => {
+          const active = link.getAttribute("href") === `#${current}`;
+          link.classList.toggle("active", active);
+          if (active) {
+            link.setAttribute("aria-current", "location");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      }
+
+      addEventListener("scroll", updateReadingState, { passive: true });
+      addEventListener("resize", updateReadingState);
+      syncThemeLabel();
+      updateReadingState();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,83 @@
+experiment:
+  name: tau2_retail_potential_grpo_step_4x8_kl001
+
+paths:
+  model_env: AGENTIC_RL_SFT_MERGED_MODEL_PATH
+  lora_adapter_env: null
+  chat_template: artifacts/chat_templates/qwen3_4b_no_think.jinja
+  agent_loop_config: configs/grpo/agent_loops/tau2_retail_potential.yaml
+  task_file: data/grpo/train_step_4x8/tasks.jsonl
+  output_dir: outputs/grpo/train_step_4x8_potential_kl001
+
+data:
+  train_batch_size: 4
+  dataloader_num_workers: 0
+  max_prompt_length: 6144
+  max_response_length: 12288
+  shuffle: false
+  seed: 300
+
+model:
+  lora_rank: 16
+  lora_alpha: 32
+  target_modules: all-linear
+  attn_implementation: flash_attention_2
+  use_remove_padding: true
+  use_fused_kernels: true
+  fused_kernel_backend: torch
+  enable_gradient_checkpointing: true
+
+actor:
+  learning_rate: 1.0e-6
+  ppo_mini_batch_size: 4
+  use_dynamic_bsz: true
+  ppo_epochs: 1
+  ppo_max_token_len_per_gpu: 65536
+  use_kl_loss: true
+  kl_loss_coef: 0.01
+  kl_loss_type: low_var_kl
+  use_torch_compile: false
+  checkpoint_save_contents:
+    - optimizer
+    - extra
+  checkpoint_load_contents:
+    - optimizer
+    - extra
+
+rollout:
+  n: 8
+  temperature: 0.7
+  top_p: 0.8
+  top_k: 20
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.75
+  max_model_len: 18432
+  max_num_batched_tokens: 18432
+  max_num_seqs: 32
+  log_prob_use_dynamic_bsz: true
+  log_prob_max_token_len_per_gpu: 65536
+  agent_loop_workers: 8
+  calculate_log_probs: true
+
+algorithm:
+  adv_estimator: tau2_potential_grpo
+  adv_estimator_module: agentic_rl.algorithms.potential_grpo
+  adv_estimator_kwargs:
+    progress_coef: 0.25
+    fact_progress_coef: 0.10
+    error_coef: 0.25
+  bypass_mode: true
+  use_kl_in_reward: false
+
+trainer:
+  total_training_steps: 1
+  total_epochs: 1
+  save_freq: 1
+  n_gpus_per_node: 1
+  nnodes: 1
+
+tracking:
+  project: agentic-rl
+  backends:
+    - console
+    - file

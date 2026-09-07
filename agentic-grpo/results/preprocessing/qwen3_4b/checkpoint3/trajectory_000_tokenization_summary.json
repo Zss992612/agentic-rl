@@ -1,0 +1,21 @@
+{
+  "checkpoint": "qwen_tokenize_decode_round_trip",
+  "dataset_index": 0,
+  "trajectory_id": "7befd7d4-2a48-4dda-891f-c072fb008517",
+  "task_id": "0",
+  "characters": 34249,
+  "tokens": 10189,
+  "tokenizer_class": "Qwen2TokenizerFast",
+  "vocab_size": 151643,
+  "im_start_token_id": 151644,
+  "im_end_token_id": 151645,
+  "im_start_count": 25,
+  "im_end_count": 25,
+  "text_sha256": "340ed0ea31bca26c382808a12f1b732f5e2a7649aeb123ce38e1a7bcb18ead8a",
+  "decoded_sha256": "340ed0ea31bca26c382808a12f1b732f5e2a7649aeb123ce38e1a7bcb18ead8a",
+  "round_trip_exact": true,
+  "direct_chat_template_match": true,
+  "truncated": false,
+  "padded": false,
+  "labels_built": false
+}

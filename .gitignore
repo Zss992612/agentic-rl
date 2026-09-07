@@ -3,6 +3,27 @@
 .vscode/
 .idea/
 
+# Local assistant/editor state
+.agents/
+.codex/
+.gemini/
+.claude/
+
+# Personal resume, recordings, and local preview/output files
+/resume/
+/resume-preview/
+/audio_transcription_*/
+/output/
+/tmp/
+
+# Server transfer bundles and archives (may contain private configuration)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
 # Python environments and caches
 .venv/
 .venv-*/
@@ -27,16 +48,22 @@ dist/
 **/.env
 **/.env.*
 !**/.env.example
+*.pem
+*.key
 
 # External source checkout (managed independently)
 tau2-bench/
+/verl/
 
 # Model weights, downloaded artifacts, and training outputs
-training/artifacts/
-training/checkpoints/
-training/outputs/
+agentic-grpo/artifacts/
+agentic-grpo/checkpoints/
+agentic-grpo/outputs/
 wandb/
 **/wandb/
+**/checkpoints/
+**/outputs/
+**/logs/
 *.safetensors
 *.ckpt
 *.pt
@@ -44,16 +71,16 @@ wandb/
 pytorch_model*.bin
 
 # Rebuildable tokenized arrays and raw evaluation dumps
-training/data/tokenized/
-training/data/eval/
+agentic-grpo/data/tokenized/
+agentic-grpo/data/eval/
 
 # Intermediate/raw SFT candidate pools; keep manifests, summaries,
 # and the final curated sft_train_*.jsonl files under version control.
-training/data/sft/old_data/
-training/data/sft/**/candidates.jsonl
-training/data/sft/**/ranked_candidates.jsonl
-training/data/sft/**/semantic_screened_candidates*.jsonl
-training/data/sft/**/selected_candidates*.jsonl
+agentic-grpo/data/sft/old_data/
+agentic-grpo/data/sft/**/candidates.jsonl
+agentic-grpo/data/sft/**/ranked_candidates.jsonl
+agentic-grpo/data/sft/**/semantic_screened_candidates*.jsonl
+agentic-grpo/data/sft/**/selected_candidates*.jsonl
 
 # Temporary files and logs
 *.log

@@ -1,0 +1,12 @@
+pipeline_name: retail_serial_v3_qwen3_4b
+source_data: data/sft/retail_serial_v3/sft_train_256.jsonl
+tokenizer_path: artifacts/tokenizers/Qwen3-4B
+output_dir: data/tokenized/retail_serial_v3_qwen3_4b
+audit_dir: results/preprocessing/qwen3_4b
+expected_trajectories: 256
+expected_tasks: 64
+max_model_length: 32768
+max_seq_length: auto
+length_rounding: 512
+sample_index: 0
+allow_truncation: false

@@ -1,0 +1,256 @@
+{
+  "checkpoint": "full_dataset_transient_scan",
+  "source": {
+    "path": "/Users/projects/agentic rl/training/data/sft/retail_serial_v3/sft_train_256.jsonl",
+    "sha256": "b5f95a0a77de50a0a7887dbf86c474ebe25d9f41529756efb1de7bb20eb60b73"
+  },
+  "tokenizer": {
+    "path": "/Users/projects/agentic rl/training/artifacts/tokenizers/Qwen3-4B",
+    "class": "Qwen2TokenizerFast",
+    "vocab_size": 151643
+  },
+  "settings": {
+    "max_model_len": 32768,
+    "truncation": false,
+    "padding": false,
+    "final_token_arrays_written": false
+  },
+  "counts": {
+    "records_seen": 256,
+    "successful_trajectories": 256,
+    "failed_trajectories": 0,
+    "unique_trajectory_ids": 256,
+    "unique_tasks": 64,
+    "trajectories_per_task": {
+      "6": 8,
+      "4": 9,
+      "5": 9,
+      "3": 15,
+      "2": 16,
+      "7": 6,
+      "8": 1
+    },
+    "total_assistant_spans": 3344,
+    "total_assistant_text_spans": 1280,
+    "total_assistant_tool_call_spans": 2064,
+    "total_tool_results": 2064
+  },
+  "token_lengths": {
+    "min": 6149,
+    "max": 16908,
+    "mean": 10308.1875,
+    "median": 9911.0,
+    "p75": 11478.5,
+    "p90": 13531.0,
+    "p95": 13975.25,
+    "p99": 15714.849999999997
+  },
+  "supervised_token_lengths": {
+    "min": 628,
+    "max": 5999,
+    "mean": 1622.3359375,
+    "median": 1429.0,
+    "p75": 1925.0,
+    "p90": 2385.5,
+    "p95": 2993.0,
+    "p99": 4474.5999999999985
+  },
+  "supervised_fractions": {
+    "min": 0.0830166270783848,
+    "max": 0.35480246037378754,
+    "mean": 0.15199395768227322,
+    "median": 0.14631856923450925,
+    "p75": 0.1730749122680586,
+    "p90": 0.19713788812709074,
+    "p95": 0.2228757078074496,
+    "p99": 0.285513407980776
+  },
+  "totals": {
+    "tokens": 2638896,
+    "supervised_tokens": 415318,
+    "masked_tokens": 2223578,
+    "weighted_supervised_fraction": 0.15738323905148213
+  },
+  "length_bins": {
+    "04097-08192": 28,
+    "08193-12288": 188,
+    "12289-32768": 40
+  },
+  "context_limit": {
+    "within_limit": 256,
+    "over_limit": 0,
+    "over_limit_records": []
+  },
+  "boundary_alignment": {
+    "trajectories_with_merged_boundaries": 227,
+    "merged_assistant_spans": 343,
+    "masked_leading_characters": 686,
+    "non_whitespace_characters": 0,
+    "trajectories_with_non_whitespace": []
+  },
+  "top_10_longest": [
+    {
+      "dataset_index": 108,
+      "trajectory_id": "7cd38137-61b3-4f4e-8da3-3d54bba014cd",
+      "task_id": "99",
+      "tokens": 16908,
+      "supervised_tokens": 5999,
+      "supervised_fraction": 0.35480246037378754
+    },
+    {
+      "dataset_index": 107,
+      "trajectory_id": "056017b6-8da2-4a97-8500-89d59462db5d",
+      "task_id": "98",
+      "tokens": 16901,
+      "supervised_tokens": 4062,
+      "supervised_fraction": 0.24034080823619905
+    },
+    {
+      "dataset_index": 106,
+      "trajectory_id": "9bb35156-39ee-4b1b-8ee5-08bf494ebf80",
+      "task_id": "98",
+      "tokens": 15843,
+      "supervised_tokens": 4426,
+      "supervised_fraction": 0.2793662816385786
+    },
+    {
+      "dataset_index": 201,
+      "trajectory_id": "110a383a-c797-4a33-8f82-68d80c9b31f8",
+      "task_id": "99",
+      "tokens": 15610,
+      "supervised_tokens": 4606,
+      "supervised_fraction": 0.295067264573991
+    },
+    {
+      "dataset_index": 244,
+      "trajectory_id": "5bc962ea-294f-4b16-a1e6-fee2e2c23570",
+      "task_id": "99",
+      "tokens": 15473,
+      "supervised_tokens": 4534,
+      "supervised_fraction": 0.29302656239901764
+    },
+    {
+      "dataset_index": 135,
+      "trajectory_id": "ea435c23-8668-43bc-8cf7-5af21e96fb6f",
+      "task_id": "98",
+      "tokens": 15187,
+      "supervised_tokens": 3587,
+      "supervised_fraction": 0.236188845723316
+    },
+    {
+      "dataset_index": 31,
+      "trajectory_id": "f6b05c85-5d14-4d39-a583-f4bd8da49190",
+      "task_id": "20",
+      "tokens": 15046,
+      "supervised_tokens": 3290,
+      "supervised_fraction": 0.21866276751296027
+    },
+    {
+      "dataset_index": 228,
+      "trajectory_id": "0126f348-9917-4923-a1af-30f29d57081e",
+      "task_id": "99",
+      "tokens": 14942,
+      "supervised_tokens": 3969,
+      "supervised_fraction": 0.26562709142015795
+    },
+    {
+      "dataset_index": 233,
+      "trajectory_id": "2b1ba4de-cbd5-4bd6-b33d-055da4961b87",
+      "task_id": "98",
+      "tokens": 14846,
+      "supervised_tokens": 2101,
+      "supervised_fraction": 0.14151960123939109
+    },
+    {
+      "dataset_index": 77,
+      "trajectory_id": "970ea165-9473-433f-807a-d057d40c46dc",
+      "task_id": "76",
+      "tokens": 14835,
+      "supervised_tokens": 3516,
+      "supervised_fraction": 0.23700707785642064
+    }
+  ],
+  "bottom_10_supervised_fraction": [
+    {
+      "dataset_index": 126,
+      "trajectory_id": "52d58da9-e37e-4882-b372-8b3a11e472c1",
+      "task_id": "113",
+      "tokens": 8420,
+      "supervised_tokens": 699,
+      "supervised_fraction": 0.0830166270783848
+    },
+    {
+      "dataset_index": 191,
+      "trajectory_id": "7ece6d6d-334f-4c1d-830a-66e8773232b7",
+      "task_id": "113",
+      "tokens": 8431,
+      "supervised_tokens": 714,
+      "supervised_fraction": 0.08468746293440874
+    },
+    {
+      "dataset_index": 210,
+      "trajectory_id": "2deda3d2-6ffc-41f1-8b86-fec4cbf07a5f",
+      "task_id": "113",
+      "tokens": 8518,
+      "supervised_tokens": 747,
+      "supervised_fraction": 0.08769664240432026
+    },
+    {
+      "dataset_index": 163,
+      "trajectory_id": "a59c39ef-91a7-4981-8d70-660f9eafd523",
+      "task_id": "113",
+      "tokens": 8512,
+      "supervised_tokens": 767,
+      "supervised_fraction": 0.09010808270676691
+    },
+    {
+      "dataset_index": 224,
+      "trajectory_id": "dd9c18eb-0c91-44f3-99f8-029b24b3bd5f",
+      "task_id": "113",
+      "tokens": 8506,
+      "supervised_tokens": 770,
+      "supervised_fraction": 0.09052433576299083
+    },
+    {
+      "dataset_index": 178,
+      "trajectory_id": "6b044761-0ad3-4da5-bd19-af8fd5d3266f",
+      "task_id": "113",
+      "tokens": 8558,
+      "supervised_tokens": 788,
+      "supervised_fraction": 0.09207758822154709
+    },
+    {
+      "dataset_index": 226,
+      "trajectory_id": "5d910e50-499a-4c7d-8e4e-e1fae56844af",
+      "task_id": "15",
+      "tokens": 9902,
+      "supervised_tokens": 948,
+      "supervised_fraction": 0.0957382347000606
+    },
+    {
+      "dataset_index": 89,
+      "trajectory_id": "0a35d023-9524-4055-a010-44a549a2fc4d",
+      "task_id": "84",
+      "tokens": 8674,
+      "supervised_tokens": 839,
+      "supervised_fraction": 0.09672584735992622
+    },
+    {
+      "dataset_index": 4,
+      "trajectory_id": "19eb81ce-5c4e-4a80-a552-25c3e74d7d77",
+      "task_id": "2",
+      "tokens": 10748,
+      "supervised_tokens": 1049,
+      "supervised_fraction": 0.0975995534052847
+    },
+    {
+      "dataset_index": 76,
+      "trajectory_id": "bacbae2e-a494-4267-8e6a-bcb37c7f070c",
+      "task_id": "76",
+      "tokens": 11032,
+      "supervised_tokens": 1081,
+      "supervised_fraction": 0.0979876722262509
+    }
+  ],
+  "failures": []
+}

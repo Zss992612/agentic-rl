@@ -1,0 +1,1 @@
+{"data_source": "tau2_retail", "agent_name": "tau2_retail", "prompt": [{"role": "user", "content": "Run τ² Retail task 10."}], "ability": "retail", "reward_model": {"style": "rule", "ground_truth": ""}, "task_id": "10", "tau2_seed": 300, "extra_info": {"split": "smoke", "index": 0}}

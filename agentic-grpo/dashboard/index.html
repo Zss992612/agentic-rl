@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="tau2-bench Retail 长链路 Agent 强化学习项目驾驶舱"
+    />
+    <title>Agentic RL · Project Control Room</title>
+    <script>
+      (() => {
+        const saved = localStorage.getItem("agentic-rl-theme");
+        const preferred = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        document.documentElement.dataset.theme = saved || preferred;
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="项目导航">
+        <div class="brand">
+          <span class="brand-mark">AR</span>
+          <div>
+            <strong>Agentic RL</strong>
+            <span>Research control room</span>
+          </div>
+        </div>
+
+        <nav class="side-nav">
+          <a class="active" href="#overview">01 · 项目总览</a>
+          <a href="#story">02 · 研究脉络</a>
+          <a href="#architecture">03 · 系统架构</a>
+          <a href="#step-flow">04 · Step 数据流</a>
+          <a href="#experiments">05 · 实验进展</a>
+          <a href="#optimizations">06 · 性能优化</a>
+          <a href="#problems">07 · 关键问题</a>
+          <a href="#interview">08 · 面试模式</a>
+        </nav>
+
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换浅色或深色主题">
+          <span class="theme-icon" id="theme-icon" aria-hidden="true">☾</span>
+          <span><strong>界面主题</strong><small id="theme-label">深色模式</small></span>
+        </button>
+
+        <div class="sidebar-foot">
+          <span class="live-dot" aria-hidden="true"></span>
+          <div>
+            <strong>Vanilla GRPO</strong>
+            <span>Formal run · in progress</span>
+          </div>
+        </div>
+      </aside>
+
+      <main>
+        <section class="hero section" id="overview">
+          <div class="hero-copy">
+            <div class="eyebrow"><span>RESEARCH DASHBOARD</span><span>2026</span></div>
+            <h1>长轨迹 Agent 的<br /><em>信用分配</em>实验</h1>
+            <p class="hero-summary">
+              在 τ²-bench Retail 中，以 Qwen3-4B 为策略模型，先建立可解释、可恢复的
+              Vanilla GRPO 基线，再研究 progress reward、process reward 与 information gain。
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="#story">查看研究脉络</a>
+              <button class="button ghost" id="interview-toggle" type="button">
+                进入面试模式
+              </button>
+            </div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-head">
+              <span>当前任务</span>
+              <span class="status-pill" id="current-status">训练中</span>
+            </div>
+            <h2>Vanilla GRPO · 4 × 8</h2>
+            <p id="current-run-description">从 Step 40 checkpoint 恢复，重新计算 Step 41–45，目标 Step 100。</p>
+            <div class="progress-track" aria-label="训练计划进度">
+              <span id="run-progress" style="width: 45%"></span>
+            </div>
+            <div class="progress-labels">
+              <span id="checkpoint-label">checkpoint 40</span>
+              <span id="target-label">target 100</span>
+            </div>
+            <dl class="mission-facts">
+              <div><dt>策略</dt><dd>SFT merged + RL LoRA</dd></div>
+              <div><dt>奖励</dt><dd>τ²-bench binary</dd></div>
+              <div><dt>约束</dt><dd>KL 0.01</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="metric-strip" aria-label="核心项目指标">
+          <article><span>SFT Pass¹</span><strong>69.375%</strong><small>111 / 160</small></article>
+          <article><span>训练信号</span><strong>87.5%</strong><small>14 / 16 mixed groups</small></article>
+          <article><span>每个 Step</span><strong>32</strong><small>4 tasks × 8 rollouts</small></article>
+          <article><span>Step 墙钟</span><strong>≈ 5.3 min</strong><small>A800 80GB</small></article>
+        </section>
+
+        <section class="section story" id="story">
+          <header class="section-heading">
+            <span class="section-index">02</span>
+            <div><p>THE THREAD</p><h2>一条清晰的研究主线</h2></div>
+            <p>每个节点都回答三个问题：为什么做、发现了什么、下一步如何被它改变。</p>
+          </header>
+
+          <div class="timeline">
+            <article class="timeline-item done">
+              <span class="timeline-number">01</span>
+              <div><p class="timeline-meta">DATA · 完成</p><h3>构建高质量 SFT 数据</h3><p>512 条候选经硬筛、语义检查与多样性选择，得到覆盖 64 个任务的 256 条成功轨迹。</p></div>
+            </article>
+            <article class="timeline-item done">
+              <span class="timeline-number">02</span>
+              <div><p class="timeline-meta">SFT · 完成</p><h3>建立可工作的 Agent 基线</h3><p>Assistant-only LoRA，最终 checkpoint step96；测试集 111/160 成功。</p></div>
+            </article>
+            <article class="timeline-item solved">
+              <span class="timeline-number">03</span>
+              <div><p class="timeline-meta">PROTOCOL · 已解决</p><h3>定位训推模板错位</h3><p>空 &lt;think&gt; 改变了工具调用的 token 协议；固定 no-think 模板后恢复至 69.375%。</p></div>
+            </article>
+            <article class="timeline-item done">
+              <span class="timeline-number">04</span>
+              <div><p class="timeline-meta">INFRA · 完成</p><h3>接入 VERL、vLLM 与 Retail</h3><p>实现异步多轮 AgentLoop、独立 Retail Session、二元奖励与完整轨迹日志。</p></div>
+            </article>
+            <article class="timeline-item active">
+              <span class="timeline-number">05</span>
+              <div><p class="timeline-meta">GRPO · 进行中</p><h3>训练 Vanilla 基线</h3><p>4×8 rollout、KL reference、动态 token batch；正式目标为 100 step。</p></div>
+            </article>
+            <article class="timeline-item future">
+              <span class="timeline-number">06</span>
+              <div><p class="timeline-meta">RESEARCH · 下一阶段</p><h3>改进长轨迹信用分配</h3><p>根据基线暴露的问题，选择一至两个细粒度信号并做严格消融。</p></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section architecture" id="architecture">
+          <header class="section-heading">
+            <span class="section-index">03</span>
+            <div><p>THE SYSTEM</p><h2>训练系统如何协同</h2></div>
+            <p>训练、推理、环境和用户模拟器彼此解耦；轨迹级错误不会被误当成模型奖励。</p>
+          </header>
+
+          <div class="architecture-layout">
+            <div class="architecture-stack" aria-label="项目系统架构">
+              <div class="arch-layer orchestration">
+                <div class="arch-label"><span>01</span><strong>编排与训练</strong><small>VERL</small></div>
+                <div class="arch-nodes">
+                  <article><span>DataLoader</span><strong>4 tasks / step</strong><small>64-task train split</small></article>
+                  <span class="arch-arrow">→</span>
+                  <article><span>GRPO Trainer</span><strong>advantage + KL</strong><small>binary reward</small></article>
+                  <span class="arch-arrow">→</span>
+                  <article><span>FSDP Actor</span><strong>RL LoRA update</strong><small>dynamic 64K tokens</small></article>
+                </div>
+              </div>
+              <div class="arch-connector"><span>policy weights ↑</span><b>↕</b><span>32 trajectories ↓</span></div>
+              <div class="arch-layer rollout-layer">
+                <div class="arch-label"><span>02</span><strong>异步采样</strong><small>vLLM</small></div>
+                <div class="arch-nodes">
+                  <article><span>AgentLoop</span><strong>8 workers</strong><small>async coroutines</small></article>
+                  <span class="arch-arrow">→</span>
+                  <article><span>vLLM Engine</span><strong>32 sequences</strong><small>prefix cache</small></article>
+                  <span class="arch-arrow">→</span>
+                  <article><span>Assistant</span><strong>Qwen3-4B</strong><small>no-think protocol</small></article>
+                </div>
+              </div>
+              <div class="arch-connector"><span>observations ↑</span><b>↕</b><span>actions ↓</span></div>
+              <div class="arch-layer environment-layer">
+                <div class="arch-label"><span>03</span><strong>任务世界</strong><small>τ²-bench</small></div>
+                <div class="arch-nodes">
+                  <article><span>Retail Session</span><strong>isolated state</strong><small>one per trajectory</small></article>
+                  <span class="arch-arrow">↔</span>
+                  <article><span>Tools + DB</span><strong>state transition</strong><small>official verifier</small></article>
+                  <span class="arch-arrow">↔</span>
+                  <article><span>User API</span><strong>DeepSeek Flash</strong><small>thinking disabled</small></article>
+                </div>
+              </div>
+            </div>
+
+            <aside class="lineage-card">
+              <p class="micro-label">MODEL LINEAGE</p>
+              <h3>两层 LoRA，职责清晰</h3>
+              <div class="lineage-flow">
+                <div><span>01</span><strong>Qwen3-4B</strong><small>普通版基座</small></div>
+                <i>+</i>
+                <div><span>02</span><strong>SFT LoRA</strong><small>step96 · merged</small></div>
+                <i>+</i>
+                <div class="active-model"><span>03</span><strong>RL LoRA</strong><small>rank 16 · trainable</small></div>
+              </div>
+              <p>Reference policy = 合并后的 SFT 模型；训练时只更新新的 RL LoRA。</p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="section step-flow" id="step-flow">
+          <header class="section-heading">
+            <span class="section-index">04</span>
+            <div><p>TENSOR JOURNEY</p><h2>一个 Step，从任务到梯度</h2></div>
+            <p>点击任一步骤，查看数据形态、负责组件和这一步为什么必要。</p>
+          </header>
+          <div class="flow-workbench">
+            <div class="flow-selector" id="flow-selector" aria-label="训练步骤选择"></div>
+            <article class="flow-detail" id="flow-detail" aria-live="polite"></article>
+          </div>
+        </section>
+
+        <section class="section experiments" id="experiments">
+          <header class="section-heading">
+            <span class="section-index">05</span>
+            <div><p>EVIDENCE</p><h2>实验进展与核心结果</h2></div>
+            <p>只呈现能够改变判断的数字；实时训练曲线仍由 W&B 负责。</p>
+          </header>
+
+          <div class="result-grid">
+            <article class="result-card span-2">
+              <div class="card-heading"><div><p class="micro-label">MODEL PROGRESSION</p><h3>能力演进</h3></div><span>Retail test · 40×4</span></div>
+              <div class="experiment-table" id="experiment-table"></div>
+            </article>
+
+            <article class="result-card">
+              <div class="card-heading"><div><p class="micro-label">SFT RELIABILITY</p><h3>Pass<sup>k</sup> 曲线</h3></div><span>step96</span></div>
+              <div class="bar-chart" id="passk-chart"></div>
+              <p class="card-note">Pass<sup>k</sup> 表示随机抽取 k 条 rollout 时全部成功的概率，因此随 k 增大而下降。</p>
+            </article>
+
+            <article class="result-card">
+              <div class="card-heading"><div><p class="micro-label">TRAINING SIGNAL</p><h3>二元奖励仍然有效</h3></div><span>16 train tasks</span></div>
+              <div class="donut-row">
+                <div class="donut" style="--value: 87.5"><strong>87.5%</strong><span>mixed groups</span></div>
+                <div class="signal-copy"><strong>14 / 16</strong><p>任务同时出现成功与失败，GRPO 仍能获得组内相对优势。</p><small>97 / 127 有效 rollout 成功</small></div>
+              </div>
+            </article>
+
+            <article class="result-card span-2">
+              <div class="card-heading"><div><p class="micro-label">STEP PROFILE</p><h3>一次正式 Step 的时间账单</h3></div><span>≈ 315–320s</span></div>
+              <div class="time-stack" aria-label="训练阶段耗时比例">
+                <span class="time-rollout" style="flex:173"><b>Rollout</b><small>≈173s</small></span>
+                <span class="time-ref" style="flex:24"><b>Ref</b><small>≈24s</small></span>
+                <span class="time-actor" style="flex:99"><b>Actor</b><small>≈99s</small></span>
+                <span class="time-sync" style="flex:18"><b>Sync</b><small>≈18s</small></span>
+              </div>
+              <div class="profile-facts">
+                <div><span>Actor MFU</span><strong>≈42%</strong></div>
+                <div><span>GPU peak reserved</span><strong>≈41GB</strong></div>
+                <div><span>CPU memory</span><strong>≈65–69GB</strong></div>
+                <div><span>有效 token</span><strong>≈0.31–0.36M</strong></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section optimizations" id="optimizations">
+          <header class="section-heading">
+            <span class="section-index">06</span>
+            <div><p>AI INFRA</p><h2>速度不是一个参数调出来的</h2></div>
+            <p>每项优化都对应一个明确的数据流瓶颈，并保留它没有优化什么。</p>
+          </header>
+          <div class="optimization-grid">
+            <article><span class="opt-state solved">协议</span><h3>No-think Chat Template</h3><p>消除 assistant header 与工具调用目标之间的空 think 前缀。</p><strong>reward ≈0.06 → Pass¹ 69.375%</strong></article>
+            <article><span class="opt-state done">已启用</span><h3>Remove Padding</h3><p>训练 forward 不再让 padding token 穿过 Transformer。</p><strong>保留真实 token 语义</strong></article>
+            <article><span class="opt-state done">已启用</span><h3>FlashAttention Varlen</h3><p>按变长序列计算注意力，避免显式构造完整注意力矩阵。</p><strong>长序列更可控</strong></article>
+            <article><span class="opt-state done">已启用</span><h3>Assistant-only LM Head</h3><p>只对需要训练的 Assistant token 做 vocab projection。</p><strong>减少 [T, V] 大矩阵</strong></article>
+            <article><span class="opt-state done">已启用</span><h3>Dynamic Micro-batch</h3><p>按真实 token 数而不是轨迹条数装箱，当前上限 64K。</p><strong>每批约 5–7 条轨迹</strong></article>
+            <article><span class="opt-state done">已启用</span><h3>Rollout Log-prob Bypass</h3><p>保留 vLLM 采样时的 old log-prob，避免无意义的重复计算。</p><strong>PPO epoch = 1</strong></article>
+            <article><span class="opt-state guarded">稳定性</span><h3>Gradient Checkpointing</h3><p>用额外重算换显存安全；关闭后曾在长序列训练中 OOM。</p><strong>正式训练保持开启</strong></article>
+            <article><span class="opt-state guarded">边界</span><h3>并发不等于无限提速</h3><p>vLLM 可接收 32 条序列，但 User API 长尾决定 rollout 墙钟。</p><strong>当前瓶颈：API + FLOPs</strong></article>
+          </div>
+        </section>
+
+        <section class="section problems" id="problems">
+          <header class="section-heading">
+            <span class="section-index">07</span>
+            <div><p>FAILURE LOG</p><h2>真正塑造项目的几个问题</h2></div>
+            <p>面试时不只讲“修了什么”，还要讲观察、排除路径和系统性影响。</p>
+          </header>
+          <div class="problem-list">
+            <details open>
+              <summary><span>01</span><div><strong>训推 Chat Template 协议错位</strong><small>模型不调用工具、重复回复、错误拒绝</small></div><b>已解决</b></summary>
+              <div class="problem-body"><p><strong>根因</strong>：训练目标是 assistant header → tool_call，而在线推理变成 assistant header → empty think → tool_call。</p><p><strong>判断依据</strong>：NPY 数据审计确认工具调用和 labels 完整；仅替换模板就让结果从约 0.06 恢复。</p><p><strong>修复</strong>：固定自定义 no-think 模板，并把 Chat Template 视为模型协议的一部分。</p></div>
+            </details>
+            <details>
+              <summary><span>02</span><div><strong>User API 空响应终止整个 Step</strong><small>Step 46 中断，模型只能回到 checkpoint 40</small></div><b>已缓解</b></summary>
+              <div class="problem-body"><p><strong>根因</strong>：API 返回 final chunk，但 content 为空；UserMessage 校验异常通过 asyncio gather 传播到整个 batch。</p><p><strong>修复</strong>：同一 user turn 使用原状态原地重试一次；仍失败才标记基础设施错误，轨迹级重试作为最后防线。</p><p><strong>剩余风险</strong>：五小时 API 额度约支持 55–56 step，真正耗尽时重试不能创造额度。</p></div>
+            </details>
+            <details>
+              <summary><span>03</span><div><strong>长序列 Actor 更新过慢</strong><small>显存未满不代表还能线性加速</small></div><b>已优化</b></summary>
+              <div class="problem-body"><p><strong>根因</strong>：padding、全 token vocab projection、注意力和反向传播共同放大计算量；瓶颈最终落在 FLOPs，而非显存容量。</p><p><strong>修复</strong>：remove padding、FlashAttention、Assistant-only LM Head、动态 token micro-batch。</p></div>
+            </details>
+            <details>
+              <summary><span>04</span><div><strong>模型错误与基础设施错误混在一起</strong><small>错误奖励会污染 GRPO 优势</small></div><b>已分层</b></summary>
+              <div class="problem-body"><p><strong>模型错误</strong>：错误工具参数、重复操作、超过最大步数，可以得到 reward 0。</p><p><strong>环境/API 错误</strong>：超时、空响应、网关故障，不应当作为模型失败进入训练。</p></div>
+            </details>
+            <details>
+              <summary><span>05</span><div><strong>Checkpoint 与 W&B 时间线分叉</strong><small>日志到 Step 45，但最近模型状态只有 Step 40</small></div><b>已处理</b></summary>
+              <div class="problem-body"><p>恢复时重新计算 Step 41–45，并新建 W&B Run，避免两套不同模型状态共享同一组 step 编号。</p></div>
+            </details>
+          </div>
+        </section>
+
+        <section class="section interview" id="interview">
+          <header class="section-heading">
+            <span class="section-index">08</span>
+            <div><p>INTERVIEW MODE</p><h2>把项目讲成一个故事</h2></div>
+            <p>先给结论，再按“研究问题—系统—困难—证据—下一步”逐层展开。</p>
+          </header>
+
+          <div class="interview-hero">
+            <div>
+              <p class="micro-label">30-SECOND PITCH</p>
+              <blockquote id="pitch-text">我在 τ²-bench Retail 上构建了一个面向长链路、多工具 Agent 的强化学习系统。项目先用 256 条高质量轨迹对 Qwen3-4B 做 Assistant-only LoRA SFT，将 Pass¹ 提升到 69.375%；随后基于 VERL、vLLM 和自定义异步 AgentLoop 跑通 4×8 Vanilla GRPO，并围绕长序列计算、API 长尾、错误归因和 checkpoint 恢复做了系统优化。当前目标是在可靠二元奖励基线上研究更细粒度的长轨迹信用分配。</blockquote>
+            </div>
+            <button class="copy-button" type="button" data-copy-target="pitch-text">复制项目介绍</button>
+          </div>
+
+          <div class="interview-grid">
+            <article>
+              <span>01 · WHY</span><h3>为什么做</h3>
+              <p>最终二元奖励很难说明长轨迹中哪一步真正贡献了成功或失败。</p>
+            </article>
+            <article>
+              <span>02 · BASELINE</span><h3>先建立什么</h3>
+              <p>先证明 Vanilla GRPO 能真实 rollout、计算优势、反传、恢复和评测。</p>
+            </article>
+            <article>
+              <span>03 · HARD PART</span><h3>最难在哪里</h3>
+              <p>不是公式本身，而是 token 协议、异步环境、外部 API 与长序列训练的组合。</p>
+            </article>
+            <article>
+              <span>04 · EVIDENCE</span><h3>如何证明</h3>
+              <p>用 Pass<sup>k</sup>、mixed groups、KL、长度、错误分类和 step profile 形成证据链。</p>
+            </article>
+          </div>
+
+          <div class="qa-board">
+            <div class="qa-title"><p class="micro-label">LIKELY FOLLOW-UPS</p><h3>高频追问</h3></div>
+            <div class="qa-list">
+              <details><summary>为什么先用二元奖励，而不是直接设计过程奖励？</summary><p>先固定一个可复现的基线，避免把系统错误、环境问题和奖励设计同时引入。只有看到 Vanilla GRPO 的真实失败模式，细粒度奖励才有明确靶点。</p></details>
+              <details><summary>为什么选择 GRPO，而不是带 Critic 的 PPO？</summary><p>同一任务可以自然采样多个 rollout，组内相对奖励直接提供优势估计；同时避免训练额外价值模型，适合当前 4B 模型与单卡资源。</p></details>
+              <details><summary>为什么使用 vLLM 而不是 SGLang？</summary><p>VERL 对 vLLM 的训练集成更成熟，权重同步与 rollout correction 路径更直接；当前瓶颈主要是外部 User API，而不是缺少更复杂的推理调度。</p></details>
+              <details><summary>这个项目最有价值的工程发现是什么？</summary><p>Chat Template 不是展示格式，而是模型协议。一个空 think 前缀就能让正常下降的 SFT loss 与在线 Agent 能力彻底脱节。</p></details>
+              <details><summary>下一步信用分配准备怎么做？</summary><p>完成 Vanilla 基线后，优先从实际失败中选择一到两个信号，例如可验证的 progress reward 或工具状态变化，而不是同时堆叠多个奖励。</p></details>
+            </div>
+          </div>
+        </section>
+
+        <footer>
+          <span>AGENTIC RL · τ²-BENCH RETAIL</span>
+          <span>Last curated: 2026-09-02 · 实时训练状态以 W&B 为准</span>
+        </footer>
+      </main>
+    </div>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

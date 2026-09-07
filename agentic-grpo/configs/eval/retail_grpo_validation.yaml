@@ -1,0 +1,65 @@
+experiment_name: retail_grpo_checkpoint_validation
+
+domain: retail
+evaluation_type: env
+
+task_selection:
+  split_file: configs/data/retail_split.yaml
+  split_name: validation
+  num_tasks: 10
+
+paths:
+  base_model_env: AGENTIC_RL_SFT_MERGED_MODEL_PATH
+  checkpoint_root: outputs/grpo/tau2_retail_qwen3_4b_vanilla_grpo_4x8_kl001/checkpoints
+  chat_template: artifacts/chat_templates/qwen3_4b_no_think.jinja
+  output_dir: outputs/eval/retail_grpo/validation
+
+models:
+  include_sft: true
+  steps: [20, 40, 60, 80, 100]
+  sft_served_name: qwen3-4b-sft-step96
+  grpo_served_name_prefix: qwen3-4b-grpo-step-
+
+server:
+  base_served_name: qwen3-4b-sft-step96
+  api_base: http://127.0.0.1:8000/v1
+  api_key: EMPTY
+  tensor_parallel_size: 1
+  max_model_len: 32768
+  max_num_seqs: 32
+  gpu_memory_utilization: 0.9
+  dtype: auto
+  tool_call_parser: hermes
+  max_lora_rank: 16
+  startup_timeout_seconds: 300
+
+agent:
+  temperature: 0.7
+  top_p: 0.8
+  max_tokens: 2048
+  parallel_tool_calls: false
+  extra_body:
+    top_k: 20
+    chat_template_kwargs:
+      enable_thinking: false
+
+user:
+  model_env: TAU2_USER_LLM
+  api_base_env: TAU2_USER_API_BASE
+  api_key_env: TAU2_USER_API_KEY
+  args:
+    temperature: 0.0
+    timeout: 60
+    num_retries: 0
+    extra_body:
+      thinking:
+        type: disabled
+
+sampling:
+  num_trials: 4
+  max_concurrency: 8
+  seed: 300
+  max_steps: 200
+  max_errors: 10
+  max_retries: 1
+  retry_delay: 2

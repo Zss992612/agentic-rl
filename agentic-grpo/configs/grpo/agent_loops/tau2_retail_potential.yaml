@@ -1,0 +1,15 @@
+- name: tau2_retail
+  _target_: agentic_rl.rollout.tau2_agent_loop.Tau2RetailAgentLoop
+  user_llm: ${oc.env:TAU2_USER_LLM}
+  user_llm_args:
+    api_base: ${oc.env:TAU2_USER_API_BASE}
+    api_key: ${oc.env:TAU2_USER_API_KEY,EMPTY}
+    temperature: 0.0
+    timeout: 60
+    num_retries: 0
+    extra_body:
+      thinking:
+        type: disabled
+  max_assistant_tokens_per_turn: 2048
+  max_infrastructure_retries: 1
+  enable_turn_credit: true
